@@ -116,7 +116,7 @@ class DcNavHeader extends HTMLElement {
         }
 
         .header-container {
-          max-width: 1400px;
+          max-width: 1200px;
           margin: 0 auto;
           padding: 0 var(--space-6);
           display: flex;

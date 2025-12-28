@@ -183,7 +183,7 @@ class DcTable extends HTMLElement {
 
         .table-container {
           background: var(--color-white);
-          border: var(--border-width-thin) solid var(--color-border);
+          border: var(--border-width-thin) solid var(--color-neutral-200);
           border-radius: var(--border-radius-lg);
           overflow: hidden;
         }
@@ -197,10 +197,10 @@ class DcTable extends HTMLElement {
           text-align: left;
           padding: var(--space-3) var(--space-4);
           background: var(--color-neutral-50);
-          font-weight: var(--font-weight-semibold);
-          font-size: var(--font-size-sm);
-          color: var(--color-text-secondary);
-          border-bottom: var(--border-width-thin) solid var(--color-border);
+          font-weight: var(--font-weight-normal);
+          font-size: var(--font-size-xs);
+          color: var(--color-neutral-600);
+          border-bottom: var(--border-width-thin) solid var(--color-neutral-200);
         }
 
         ::slotted(th[data-sortable]) {
@@ -210,19 +210,20 @@ class DcTable extends HTMLElement {
         }
 
         ::slotted(th[data-sortable]:hover) {
-          background: var(--color-neutral-100);
+          color: var(--color-neutral-900);
         }
 
         ::slotted(td) {
           padding: var(--space-4);
-          border-bottom: var(--border-width-thin) solid var(--color-border);
+          border-bottom: var(--border-width-thin) solid var(--color-neutral-100);
           font-size: var(--font-size-sm);
           color: var(--color-text-primary);
         }
 
         ::slotted(tbody tr) {
-          transition: var(--transition-base);
+          transition: background-color 0.15s ease;
           cursor: pointer;
+          background: var(--color-white);
         }
 
         ::slotted(tbody tr:hover) {
@@ -238,13 +239,13 @@ class DcTable extends HTMLElement {
           align-items: center;
           justify-content: space-between;
           padding: var(--space-4);
-          border-top: var(--border-width-thin) solid var(--color-border);
-          background: var(--color-neutral-50);
+          border-top: var(--border-width-thin) solid var(--color-neutral-200);
+          background: transparent;
         }
 
         .pagination-info {
           font-size: var(--font-size-sm);
-          color: var(--color-text-secondary);
+          color: var(--color-neutral-600);
         }
 
         .pagination-buttons {

@@ -75,7 +75,7 @@ export const mockAdvisories = {
       name: 'Initial consultation - Jan 2024',
       createdAt: '2024-01-15',
       updatedAt: '2024-01-20',
-      status: 'approved',
+      assignedTo: 'Jan de Vries',
       versionCount: 2
     },
     {
@@ -84,7 +84,7 @@ export const mockAdvisories = {
       name: 'Follow-up consultation - Mar 2024',
       createdAt: '2024-03-20',
       updatedAt: '2024-03-20',
-      status: 'sent',
+      assignedTo: 'Jan de Vries',
       versionCount: 1
     }
   ],
@@ -95,7 +95,7 @@ export const mockAdvisories = {
       name: 'Battery system advisory - Feb 2024',
       createdAt: '2024-02-01',
       updatedAt: '2024-03-18',
-      status: 'sent',
+      assignedTo: 'Maria Peters',
       versionCount: 2
     }
   ],
@@ -106,7 +106,7 @@ export const mockAdvisories = {
       name: 'Initial consultation - Feb 2024',
       createdAt: '2024-02-10',
       updatedAt: '2024-03-15',
-      status: 'draft',
+      assignedTo: 'Jan de Vries',
       versionCount: 1
     }
   ],
@@ -117,7 +117,7 @@ export const mockAdvisories = {
       name: 'Comparison advisory - Feb 2024',
       createdAt: '2024-02-20',
       updatedAt: '2024-03-01',
-      status: 'approved',
+      assignedTo: 'Maria Peters',
       versionCount: 3
     },
     {
@@ -126,7 +126,7 @@ export const mockAdvisories = {
       name: 'Updated financing options - Mar 2024',
       createdAt: '2024-03-22',
       updatedAt: '2024-03-22',
-      status: 'draft',
+      assignedTo: 'Jan de Vries',
       versionCount: 1
     }
   ],
@@ -137,7 +137,7 @@ export const mockAdvisories = {
       name: 'Initial consultation - Mar 2024',
       createdAt: '2024-03-01',
       updatedAt: '2024-03-10',
-      status: 'sent',
+      assignedTo: 'Maria Peters',
       versionCount: 1
     }
   ]

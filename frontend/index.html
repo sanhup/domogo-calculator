@@ -3,57 +3,866 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Domogo Calculator</title>
+  <title>Domogo Calculator - Consultant Dashboard</title>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 </head>
 <body>
-  <div id="app">
-    <header>
-      <h1>Domogo Battery ROI Calculator</h1>
-      <dc-language-switcher></dc-language-switcher>
-    </header>
+  <div id="app"></div>
 
-    <main>
-      <div class="container">
-        <h2>Component Test Page</h2>
+  <script type="module">
+    console.log('=== APP.HTML SCRIPT STARTED ===');
 
-        <section class="test-section">
-          <h3>Buttons</h3>
-          <dc-button variant="primary" size="md">Primary Button</dc-button>
-          <dc-button variant="secondary" size="md">Secondary Button</dc-button>
-          <dc-button variant="primary" size="sm">Small</dc-button>
-          <dc-button variant="primary" size="lg">Large</dc-button>
-          <dc-button variant="primary" disabled>Disabled</dc-button>
-        </section>
+    import { auth } from './src/utils/auth.js';
+    import { router } from './src/utils/router.js';
+    import {
+      mockCustomers,
+      mockAdvisories,
+      mockVersions,
+      getCustomerById,
+      getAdvisoriesByCustomerId,
+      getAdvisoryById,
+      getVersionsByAdvisoryId
+    } from './src/utils/mock-data.js';
+    import './src/main.js';
 
-        <section class="test-section">
-          <h3>Inputs</h3>
-          <dc-input label="Email" type="email" placeholder="user@example.com"></dc-input>
-          <dc-input label="Password" type="password"></dc-input>
-          <dc-input label="Number" type="number" placeholder="0"></dc-input>
-        </section>
+    console.log('=== ALL IMPORTS SUCCESSFUL ===');
 
-        <section class="test-section">
-          <h3>Select</h3>
-          <dc-select label="Choose option">
-            <option value="1">Option 1</option>
-            <option value="2">Option 2</option>
-            <option value="3">Option 3</option>
-          </dc-select>
-        </section>
+    // App state
+    const state = {
+      currentUser: null,
+      currentCustomer: null,
+      currentAdvisory: null,
+      customers: mockCustomers,
+      advisories: mockAdvisories,
+      versions: mockVersions
+    };
 
-        <section class="test-section">
-          <h3>Card</h3>
-          <dc-card>
-            <h4>Card Title</h4>
-            <p>This is a card component with some content inside.</p>
-            <dc-button variant="primary">Action</dc-button>
-          </dc-card>
-        </section>
-      </div>
-    </main>
-  </div>
+    // Initialize app
+    function init() {
+      console.log('Init called, pathname:', window.location.pathname);
+      console.log('Is authenticated:', auth.isAuthenticated());
 
-  <script type="module" src="/src/main.js"></script>
+      // Check if user is authenticated
+      if (auth.isAuthenticated()) {
+        console.log('User is authenticated, showing app');
+        state.currentUser = auth.getUser();
+        showApp();
+      } else {
+        console.log('User not authenticated, showing login');
+        // Save the intended destination before showing login
+        const intendedPath = window.location.pathname;
+        console.log('Intended path:', intendedPath);
+        if (intendedPath !== '/' && intendedPath !== '/app.html') {
+          sessionStorage.setItem('intendedPath', intendedPath);
+        }
+        showLogin();
+      }
+    }
+
+    // Show login page
+    async function showLogin() {
+      document.getElementById('app').innerHTML = `
+        <dc-auth-form mode="login"></dc-auth-form>
+      `;
+
+      // Wait for component to be defined
+      await customElements.whenDefined('dc-auth-form');
+
+      // Handle login
+      const authForm = document.querySelector('dc-auth-form');
+      authForm.addEventListener('submit', async (e) => {
+        const { mode, data } = e.detail;
+
+        try {
+          if (mode === 'login') {
+            const user = await auth.login(data.email, data.password);
+            state.currentUser = user;
+
+            // Check if there's an intended path to redirect to
+            const intendedPath = sessionStorage.getItem('intendedPath');
+            if (intendedPath) {
+              sessionStorage.removeItem('intendedPath');
+              // Navigate to intended path after showing app
+              showApp();
+              router.navigate(intendedPath);
+            } else {
+              showApp();
+            }
+          }
+        } catch (error) {
+          authForm.setAttribute('error', error.message);
+        }
+      });
+    }
+
+    // Show main app
+    function showApp() {
+      // Set up router routes
+      router.add('/app.html', () => router.replace('/customers'));
+      router.add('/', () => router.replace('/customers'));
+      router.add('/customers', () => renderDashboard());
+      router.add('/customers/:id', (params) => {
+        console.log('Customer detail route matched:', params);
+        renderCustomerDetail(params.params.id);
+      });
+      router.add('/customers/:customerId/advisories/:advisoryId', (params) =>
+        renderAdvisoryDetail(params.params.customerId, params.params.advisoryId)
+      );
+
+      // Add auth check hook
+      router.beforeNavigate((path) => {
+        if (!auth.isAuthenticated()) {
+          showLogin();
+          return false;
+        }
+        return true;
+      });
+
+      // Start router
+      console.log('Starting router with path:', window.location.pathname);
+      router.start();
+    }
+
+    // Render dashboard (customers list)
+    function renderDashboard() {
+      // Pagination state
+      let currentPage = 1;
+      const pageSize = 10;
+      let sortColumn = 'name';
+      let sortDirection = 'asc';
+
+      // Sort and paginate data
+      function getSortedCustomers() {
+        const sorted = [...state.customers].sort((a, b) => {
+          const aVal = a[sortColumn];
+          const bVal = b[sortColumn];
+          const modifier = sortDirection === 'asc' ? 1 : -1;
+          return aVal < bVal ? -modifier : modifier;
+        });
+        return sorted;
+      }
+
+      function render() {
+        const sorted = getSortedCustomers();
+        const start = (currentPage - 1) * pageSize;
+        const end = start + pageSize;
+        const page = sorted.slice(start, end);
+
+        document.getElementById('app').innerHTML = `
+          <dc-nav-header
+            user-name="${state.currentUser.name}"
+            user-role="${state.currentUser.role}"
+            active-route="/customers">
+          </dc-nav-header>
+
+          <main style="padding: var(--space-6); background: #f8fafc; min-height: calc(100vh - 64px);">
+            <div class="container" style="max-width: 1200px; margin: 0 auto;">
+              <div style="margin-bottom: var(--space-6);">
+                <h1 style="margin-bottom: var(--space-2);">Klanten</h1>
+                <p style="color: var(--color-text-secondary);">
+                  Beheer uw klanten en bekijk hun berekeningen
+                </p>
+              </div>
+
+              <dc-table
+                id="customersTable"
+                current-page="${currentPage}"
+                page-size="${pageSize}"
+                total-items="${state.customers.length}"
+                sort-column="${sortColumn}"
+                sort-direction="${sortDirection}">
+                <table slot="table">
+                  <thead>
+                    <tr>
+                      <th data-sortable="name">Naam</th>
+                      <th data-sortable="email">Email</th>
+                      <th data-sortable="city">Stad</th>
+                      <th data-sortable="lastActivity">Laatste activiteit</th>
+                      <th data-sortable="advisoryCount">Adviezen</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${page.map(customer => `
+                      <tr data-row-id="${customer.id}">
+                        <td><strong>${customer.name}</strong></td>
+                        <td>${customer.email}</td>
+                        <td>${customer.city}</td>
+                        <td>${new Date(customer.lastActivity).toLocaleDateString('nl-NL')}</td>
+                        <td>${customer.advisoryCount}</td>
+                      </tr>
+                    `).join('')}
+                  </tbody>
+                </table>
+              </dc-table>
+            </div>
+          </main>
+        `;
+
+        // Handle navigation
+        document.querySelector('dc-nav-header').addEventListener('navigate', (e) => {
+          router.navigate(e.detail.route);
+        });
+
+        document.querySelector('dc-nav-header').addEventListener('logout', () => {
+          auth.logout();
+          showLogin();
+        });
+
+        // Handle table events
+        const table = document.getElementById('customersTable');
+
+        table.addEventListener('row-click', (e) => {
+          router.navigate(`/customers/${e.detail.rowId}`);
+        });
+
+        table.addEventListener('sort-change', (e) => {
+          sortColumn = e.detail.column;
+          sortDirection = e.detail.direction;
+          render();
+        });
+
+        table.addEventListener('page-change', (e) => {
+          currentPage = e.detail.page;
+          render();
+        });
+      }
+
+      render();
+    }
+
+    // Render customer detail page
+    function renderCustomerDetail(customerId) {
+      console.log('renderCustomerDetail called with ID:', customerId, 'type:', typeof customerId);
+      const customer = getCustomerById(customerId);
+      console.log('Found customer:', customer);
+      if (!customer) {
+        console.log('Customer not found, redirecting to dashboard');
+        renderDashboard();
+        return;
+      }
+
+      const advisories = getAdvisoriesByCustomerId(customerId);
+
+      // Pagination state for advisories
+      let currentPage = 1;
+      const pageSize = 10;
+      let sortColumn = 'updatedAt';
+      let sortDirection = 'desc';
+
+      // Find the latest advisory (most recent updatedAt)
+      const latestAdvisory = advisories.length > 0
+        ? advisories.reduce((latest, current) =>
+            new Date(current.updatedAt) > new Date(latest.updatedAt) ? current : latest
+          )
+        : null;
+
+      let expandedAdvisories = new Set(latestAdvisory ? [latestAdvisory.id] : []); // Expand latest by default
+      let allExpanded = false;
+      let versionClickHandlerAdded = false; // Track if version click handler is added
+
+      function getSortedAdvisories() {
+        const sorted = [...advisories].sort((a, b) => {
+          const aVal = a[sortColumn];
+          const bVal = b[sortColumn];
+          const modifier = sortDirection === 'asc' ? 1 : -1;
+          return aVal < bVal ? -modifier : modifier;
+        });
+        return sorted;
+      }
+
+      function toggleAdvisory(advisoryId) {
+        if (expandedAdvisories.has(advisoryId)) {
+          expandedAdvisories.delete(advisoryId);
+        } else {
+          expandedAdvisories.add(advisoryId);
+        }
+        allExpanded = expandedAdvisories.size === advisories.length;
+        render();
+      }
+
+      function toggleAllAdvisories() {
+        if (allExpanded) {
+          expandedAdvisories.clear();
+          allExpanded = false;
+        } else {
+          advisories.forEach(advisory => expandedAdvisories.add(advisory.id));
+          allExpanded = true;
+        }
+        render();
+      }
+
+      function getStatusBadge(status) {
+        const badges = {
+          draft: '<span style="padding: 0.25rem 0.75rem; background: var(--color-neutral-200); color: var(--color-neutral-700); border-radius: var(--border-radius-full); font-size: var(--font-size-xs); font-weight: var(--font-weight-medium);">Concept</span>',
+          sent: '<span style="padding: 0.25rem 0.75rem; background: var(--color-primary-100); color: var(--color-primary-700); border-radius: var(--border-radius-full); font-size: var(--font-size-xs); font-weight: var(--font-weight-medium);">Verzonden</span>',
+          approved: '<span style="padding: 0.25rem 0.75rem; background: #dcfce7; color: #15803d; border-radius: var(--border-radius-full); font-size: var(--font-size-xs); font-weight: var(--font-weight-medium);">Goedgekeurd</span>',
+          invalid: '<span style="padding: 0.25rem 0.75rem; background: #fee2e2; color: #991b1b; border-radius: var(--border-radius-full); font-size: var(--font-size-xs); font-weight: var(--font-weight-medium);">Ongeldig</span>',
+          archived: '<span style="padding: 0.25rem 0.75rem; background: var(--color-neutral-100); color: var(--color-neutral-600); border-radius: var(--border-radius-full); font-size: var(--font-size-xs); font-weight: var(--font-weight-medium);">Gearchiveerd</span>'
+        };
+        return badges[status] || status;
+      }
+
+      function render() {
+        const sorted = getSortedAdvisories();
+        const start = (currentPage - 1) * pageSize;
+        const end = start + pageSize;
+        const page = sorted.slice(start, end);
+
+        document.getElementById('app').innerHTML = `
+          <dc-nav-header
+            user-name="${state.currentUser.name}"
+            user-role="${state.currentUser.role}"
+            active-route="/customers">
+          </dc-nav-header>
+
+          <style>
+            .page-container {
+              padding: var(--space-6);
+              background: #f8fafc;
+              min-height: calc(100vh - 64px);
+            }
+
+            .content-wrapper {
+              max-width: 1200px;
+              margin: 0 auto;
+            }
+
+            .back-link {
+              color: var(--color-neutral-600);
+              text-decoration: none;
+              font-size: var(--font-size-sm);
+              font-weight: var(--font-weight-medium);
+              transition: color 0.15s;
+            }
+
+            .back-link:hover {
+              color: var(--color-neutral-900);
+            }
+
+            .section-header {
+              margin-bottom: var(--space-4);
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+            }
+
+            .section-title {
+              margin: 0 0 var(--space-1) 0;
+              font-size: var(--font-size-lg);
+              font-weight: var(--font-weight-semibold);
+            }
+
+            .section-subtitle {
+              margin: 0;
+              color: var(--color-text-secondary);
+              font-size: var(--font-size-sm);
+            }
+
+            .header-actions {
+              display: flex;
+              gap: var(--space-2);
+              align-items: center;
+            }
+
+            .table-header {
+              border-bottom: var(--border-width-thin) solid var(--color-neutral-200);
+              background: var(--color-neutral-50);
+            }
+
+            .table-header th {
+              text-align: left;
+              padding: var(--space-3) var(--space-4);
+              font-size: var(--font-size-xs);
+              font-weight: var(--font-weight-normal);
+              color: var(--color-neutral-600);
+            }
+
+            .table-cell {
+              padding: var(--space-4);
+              font-size: var(--font-size-sm);
+              max-width: 0;
+              overflow: hidden;
+              text-overflow: ellipsis;
+              white-space: nowrap;
+            }
+
+            .table-cell-flex {
+              display: flex;
+              align-items: center;
+              gap: var(--space-2);
+              overflow: hidden;
+            }
+
+            .table-cell-content {
+              overflow: hidden;
+              text-overflow: ellipsis;
+              white-space: nowrap;
+            }
+
+            .chevron-icon {
+              flex-shrink: 0;
+              transition: transform 0.2s;
+              color: var(--color-neutral-500);
+            }
+
+            .expanded-row {
+              background: #f8fafc;
+            }
+
+            .expanded-content {
+              margin-left: 32px;
+              margin-right: var(--space-4);
+            }
+
+            .nested-table-wrapper {
+              background: white;
+              border: 1px solid var(--color-neutral-200);
+              border-radius: var(--border-radius-lg);
+              overflow: hidden;
+            }
+
+            .nested-table {
+              width: 100%;
+              border-collapse: collapse;
+            }
+
+            .nested-table-cell {
+              padding: var(--space-4) var(--space-2);
+              font-size: var(--font-size-sm);
+              max-width: 0;
+              overflow: hidden;
+              text-overflow: ellipsis;
+              white-space: nowrap;
+            }
+
+            .version-row {
+              border-bottom: var(--border-width-thin) solid var(--color-neutral-100);
+              cursor: pointer;
+              background: var(--color-white);
+              transition: background-color 0.15s;
+            }
+
+            .version-row:hover {
+              background: var(--color-neutral-50);
+            }
+
+            .product-info {
+              overflow: hidden;
+              text-overflow: ellipsis;
+              white-space: nowrap;
+            }
+
+            .product-capacity {
+              color: var(--color-neutral-600);
+              font-size: var(--font-size-xs);
+              margin-top: 2px;
+              overflow: hidden;
+              text-overflow: ellipsis;
+              white-space: nowrap;
+            }
+
+            .roi-cell {
+              color: #059669;
+              font-weight: var(--font-weight-medium);
+            }
+          </style>
+
+          <main class="page-container">
+            <div class="content-wrapper">
+              <!-- Back button -->
+              <div style="margin-bottom: var(--space-4);">
+                <a href="#" id="backButton" class="back-link">
+                  ← Terug naar klanten
+                </a>
+              </div>
+
+              <!-- Customer details card -->
+              <dc-card style="margin-bottom: var(--space-6);">
+                <h2 style="margin-bottom: var(--space-4);">${customer.name}</h2>
+                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--space-4);">
+                  <div>
+                    <div style="font-size: var(--font-size-sm); color: var(--color-text-secondary); margin-bottom: var(--space-1);">Email</div>
+                    <div>${customer.email}</div>
+                  </div>
+                  <div>
+                    <div style="font-size: var(--font-size-sm); color: var(--color-text-secondary); margin-bottom: var(--space-1);">Telefoon</div>
+                    <div>${customer.phone}</div>
+                  </div>
+                  <div>
+                    <div style="font-size: var(--font-size-sm); color: var(--color-text-secondary); margin-bottom: var(--space-1);">Adres</div>
+                    <div>${customer.address}, ${customer.postalCode} ${customer.city}</div>
+                  </div>
+                  <div>
+                    <div style="font-size: var(--font-size-sm); color: var(--color-text-secondary); margin-bottom: var(--space-1);">Klant sinds</div>
+                    <div>${new Date(customer.createdAt).toLocaleDateString('nl-NL')}</div>
+                  </div>
+                </div>
+              </dc-card>
+
+              <!-- Advisories section -->
+              <dc-card>
+                <div class="section-header">
+                  <div>
+                    <h3 class="section-title">Adviezen</h3>
+                    <p class="section-subtitle">
+                      ${advisories.length} ${advisories.length === 1 ? 'advies' : 'adviezen'}
+                    </p>
+                  </div>
+                  <div class="header-actions">
+                    <a href="#" id="expandAllButton" class="back-link" style="cursor: pointer;">
+                      ${allExpanded ? 'Alles inklappen' : 'Alles uitklappen'}
+                    </a>
+                    <dc-button variant="primary" size="sm" id="newAdvisoryButton" style="margin: 0; padding: var(--space-2) 0 var(--space-2) var(--space-4); min-width: 140px;">
+                      + Nieuw advies
+                    </dc-button>
+                  </div>
+                </div>
+
+                <dc-table
+                id="advisoriesTable"
+                current-page="${currentPage}"
+                page-size="${pageSize}"
+                total-items="${advisories.length}"
+                sort-column="${sortColumn}"
+                sort-direction="${sortDirection}">
+                <table slot="table">
+                  <thead>
+                    <tr class="table-header">
+                      <th data-sortable="name" style="width: 30%;">Naam</th>
+                      <th data-sortable="assignedTo" style="width: 20%;">Toegewezen aan</th>
+                      <th data-sortable="versionCount" style="width: 15%;">Berekeningen</th>
+                      <th data-sortable="updatedAt" style="width: 18%;">Laatst gewijzigd</th>
+                      <th data-sortable="createdAt" style="width: 17%;">Aangemaakt</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${page.map(advisory => {
+                      const isExpanded = expandedAdvisories.has(advisory.id);
+                      const versions = getVersionsByAdvisoryId(advisory.id);
+
+                      return `
+                        <tr data-row-id="${advisory.id}" style="cursor: pointer;">
+                          <td class="table-cell" title="${advisory.name}">
+                            <div class="table-cell-flex">
+                              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" class="chevron-icon" style="transform: ${isExpanded ? 'rotate(90deg)' : 'rotate(0deg)'};">
+                                <path d="M6 4L10 8L6 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                              </svg>
+                              <span class="table-cell-content">${advisory.name}</span>
+                            </div>
+                          </td>
+                          <td class="table-cell" title="${advisory.assignedTo}">${advisory.assignedTo}</td>
+                          <td class="table-cell" title="${advisory.versionCount}">${advisory.versionCount}</td>
+                          <td class="table-cell" title="${new Date(advisory.updatedAt).toLocaleDateString('nl-NL')}">${new Date(advisory.updatedAt).toLocaleDateString('nl-NL')}</td>
+                          <td class="table-cell" title="${new Date(advisory.createdAt).toLocaleDateString('nl-NL')}">${new Date(advisory.createdAt).toLocaleDateString('nl-NL')}</td>
+                        </tr>
+                        ${isExpanded ? `
+                          <tr class="expanded-row">
+                            <td colspan="5" style="padding: var(--space-4) 0;">
+                              <div class="expanded-content">
+                                ${versions.length > 0 ? `
+                                  <div class="nested-table-wrapper">
+                                    <table class="nested-table">
+                                    <thead>
+                                      <tr class="table-header">
+                                        <th style="width: 25%;">Naam</th>
+                                        <th style="width: 23%;">Product</th>
+                                        <th style="width: 10%;">ROI</th>
+                                        <th style="width: 15%;">Terugverdientijd</th>
+                                        <th style="width: 13%;">Status</th>
+                                        <th style="width: 14%;">Laatst gewijzigd</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      ${versions.map(version => `
+                                        <tr class="version-row" data-version-id="${version.id}">
+                                          <td class="nested-table-cell" title="${version.name}">${version.name}</td>
+                                          <td class="nested-table-cell" title="${version.product} - ${version.capacity}">
+                                            <div class="product-info">${version.product}</div>
+                                            <div class="product-capacity">${version.capacity}</div>
+                                          </td>
+                                          <td class="nested-table-cell roi-cell" title="${version.roi}">${version.roi}</td>
+                                          <td class="nested-table-cell" title="${version.paybackYears} jaar">${version.paybackYears} jaar</td>
+                                          <td class="nested-table-cell" title="${version.status}">${getStatusBadge(version.status)}</td>
+                                          <td class="nested-table-cell" title="${new Date(version.updatedAt).toLocaleDateString('nl-NL')}">${new Date(version.updatedAt).toLocaleDateString('nl-NL')}</td>
+                                        </tr>
+                                      `).join('')}
+                                    </tbody>
+                                  </table>
+                                  </div>
+                                ` : `
+                                  <p style="color: var(--color-neutral-600); font-size: var(--font-size-sm); padding: var(--space-4) var(--space-2);">
+                                    Geen berekeningen gevonden
+                                  </p>
+                                `}
+                              </div>
+                            </td>
+                          </tr>
+                        ` : ''}
+                      `;
+                    }).join('')}
+                  </tbody>
+                </table>
+              </dc-table>
+              </dc-card>
+            </div>
+          </main>
+        `;
+
+        // Handle navigation
+        document.querySelector('dc-nav-header').addEventListener('navigate', (e) => {
+          router.navigate(e.detail.route);
+        });
+
+        document.querySelector('dc-nav-header').addEventListener('logout', () => {
+          auth.logout();
+          showLogin();
+        });
+
+        // Handle back button
+        document.getElementById('backButton').addEventListener('click', (e) => {
+          e.preventDefault();
+          router.navigate('/customers');
+        });
+
+        // Handle expand all button
+        document.getElementById('expandAllButton').addEventListener('click', (e) => {
+          e.preventDefault();
+          toggleAllAdvisories();
+        });
+
+        // Handle new advisory button
+        document.getElementById('newAdvisoryButton').addEventListener('click', () => {
+          alert('Nieuw advies maken - wordt nog geïmplementeerd');
+        });
+
+        // Handle table events
+        const table = document.getElementById('advisoriesTable');
+
+        table.addEventListener('row-click', (e) => {
+          // Only toggle if not clicking on an expanded row
+          if (!e.detail.row.classList.contains('expanded-row')) {
+            toggleAdvisory(e.detail.rowId);
+          }
+        });
+
+        table.addEventListener('sort-change', (e) => {
+          sortColumn = e.detail.column;
+          sortDirection = e.detail.direction;
+          render();
+        });
+
+        table.addEventListener('page-change', (e) => {
+          currentPage = e.detail.page;
+          render();
+        });
+
+        // Handle version row clicks (only add once)
+        if (!versionClickHandlerAdded) {
+          document.addEventListener('click', (e) => {
+            const versionRow = e.target.closest('.version-row');
+            if (versionRow) {
+              const versionId = versionRow.getAttribute('data-version-id');
+              alert(`Berekening ${versionId} openen - wordt nog geïmplementeerd`);
+            }
+          });
+          versionClickHandlerAdded = true;
+        }
+      }
+
+      render();
+    }
+
+    // Render advisory detail page with versions
+    function renderAdvisoryDetail(customerId, advisoryId) {
+      const customer = getCustomerById(customerId);
+      const advisory = getAdvisoryById(advisoryId);
+
+      if (!customer || !advisory) {
+        renderDashboard();
+        return;
+      }
+
+      const versions = getVersionsByAdvisoryId(advisoryId);
+
+      // Pagination state for versions
+      let currentPage = 1;
+      const pageSize = 5;
+      let sortColumn = 'createdAt';
+      let sortDirection = 'desc';
+
+      function getSortedVersions() {
+        const sorted = [...versions].sort((a, b) => {
+          const aVal = a[sortColumn];
+          const bVal = b[sortColumn];
+          const modifier = sortDirection === 'asc' ? 1 : -1;
+          return aVal < bVal ? -modifier : modifier;
+        });
+        return sorted;
+      }
+
+      function getStatusBadge(status) {
+        const badges = {
+          draft: '<span style="padding: 0.25rem 0.75rem; background: var(--color-neutral-200); color: var(--color-neutral-700); border-radius: var(--border-radius-full); font-size: var(--font-size-xs); font-weight: var(--font-weight-medium);">Concept</span>',
+          sent: '<span style="padding: 0.25rem 0.75rem; background: var(--color-primary-100); color: var(--color-primary-700); border-radius: var(--border-radius-full); font-size: var(--font-size-xs); font-weight: var(--font-weight-medium);">Verzonden</span>',
+          approved: '<span style="padding: 0.25rem 0.75rem; background: #dcfce7; color: #15803d; border-radius: var(--border-radius-full); font-size: var(--font-size-xs); font-weight: var(--font-weight-medium);">Goedgekeurd</span>',
+          invalid: '<span style="padding: 0.25rem 0.75rem; background: #fee2e2; color: #991b1b; border-radius: var(--border-radius-full); font-size: var(--font-size-xs); font-weight: var(--font-weight-medium);">Ongeldig</span>',
+          archived: '<span style="padding: 0.25rem 0.75rem; background: var(--color-neutral-100); color: var(--color-neutral-600); border-radius: var(--border-radius-full); font-size: var(--font-size-xs); font-weight: var(--font-weight-medium);">Gearchiveerd</span>'
+        };
+        return badges[status] || status;
+      }
+
+      function render() {
+        const sorted = getSortedVersions();
+        const start = (currentPage - 1) * pageSize;
+        const end = start + pageSize;
+        const page = sorted.slice(start, end);
+
+        document.getElementById('app').innerHTML = `
+          <dc-nav-header
+            user-name="${state.currentUser.name}"
+            user-role="${state.currentUser.role}"
+            active-route="/customers">
+          </dc-nav-header>
+
+          <main style="padding: var(--space-6); background: #f8fafc; min-height: calc(100vh - 64px);">
+            <div class="container" style="max-width: 1200px; margin: 0 auto;">
+              <!-- Breadcrumbs -->
+              <div style="margin-bottom: var(--space-4); display: flex; gap: var(--space-2); align-items: center; font-size: var(--font-size-sm); color: var(--color-text-secondary);">
+                <a href="#/customers" style="color: var(--color-primary-500); text-decoration: none;" id="breadcrumbCustomers">Klanten</a>
+                <span>/</span>
+                <a href="#/customers/${customerId}" style="color: var(--color-primary-500); text-decoration: none;" id="breadcrumbCustomer">${customer.name}</a>
+                <span>/</span>
+                <span style="color: var(--color-text-primary);">${advisory.name}</span>
+              </div>
+
+              <!-- Advisory details card -->
+              <dc-card style="margin-bottom: var(--space-6);">
+                <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: var(--space-4);">
+                  <div>
+                    <h2 style="margin-bottom: var(--space-2);">${advisory.name}</h2>
+                    <div style="display: flex; gap: var(--space-3); align-items: center;">
+                      ${getStatusBadge(advisory.status)}
+                      <span style="color: var(--color-text-secondary); font-size: var(--font-size-sm);">
+                        voor ${customer.name}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-4); margin-top: var(--space-4); padding-top: var(--space-4); border-top: var(--border-width-thin) solid var(--color-border);">
+                  <div>
+                    <div style="font-size: var(--font-size-sm); color: var(--color-text-secondary); margin-bottom: var(--space-1);">Aangemaakt</div>
+                    <div>${new Date(advisory.createdAt).toLocaleDateString('nl-NL')}</div>
+                  </div>
+                  <div>
+                    <div style="font-size: var(--font-size-sm); color: var(--color-text-secondary); margin-bottom: var(--space-1);">Laatst gewijzigd</div>
+                    <div>${new Date(advisory.updatedAt).toLocaleDateString('nl-NL')}</div>
+                  </div>
+                  <div>
+                    <div style="font-size: var(--font-size-sm); color: var(--color-text-secondary); margin-bottom: var(--space-1);">Aantal berekeningen</div>
+                    <div>${advisory.versionCount}</div>
+                  </div>
+                </div>
+              </dc-card>
+
+              <!-- Versions section -->
+              <div style="margin-bottom: var(--space-4); display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                  <h3 style="margin-bottom: var(--space-1);">Berekeningen</h3>
+                  <p style="color: var(--color-text-secondary); font-size: var(--font-size-sm);">
+                    ${versions.length} ${versions.length === 1 ? 'berekening' : 'berekeningen'}
+                  </p>
+                </div>
+                <dc-button variant="primary" id="newVersionButton">
+                  + Nieuwe berekening
+                </dc-button>
+              </div>
+
+              <dc-table
+                id="versionsTable"
+                current-page="${currentPage}"
+                page-size="${pageSize}"
+                total-items="${versions.length}"
+                sort-column="${sortColumn}"
+                sort-direction="${sortDirection}">
+                <table slot="table">
+                  <thead>
+                    <tr>
+                      <th data-sortable="name">Naam</th>
+                      <th data-sortable="product">Product</th>
+                      <th data-sortable="roi">ROI</th>
+                      <th data-sortable="paybackYears">Terugverdientijd</th>
+                      <th data-sortable="status">Status</th>
+                      <th data-sortable="updatedAt">Laatst gewijzigd</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${page.map(version => `
+                      <tr data-row-id="${version.id}">
+                        <td><strong>${version.name}</strong></td>
+                        <td>${version.product}<br><small style="color: var(--color-text-secondary);">${version.capacity}</small></td>
+                        <td>${version.roi}</td>
+                        <td>${version.paybackYears} jaar</td>
+                        <td>${getStatusBadge(version.status)}</td>
+                        <td>${new Date(version.updatedAt).toLocaleDateString('nl-NL')}</td>
+                      </tr>
+                    `).join('')}
+                  </tbody>
+                </table>
+              </dc-table>
+            </div>
+          </main>
+        `;
+
+        // Handle navigation
+        document.querySelector('dc-nav-header').addEventListener('navigate', (e) => {
+          router.navigate(e.detail.route);
+        });
+
+        document.querySelector('dc-nav-header').addEventListener('logout', () => {
+          auth.logout();
+          showLogin();
+        });
+
+        // Handle breadcrumb clicks
+        document.getElementById('breadcrumbCustomers').addEventListener('click', (e) => {
+          e.preventDefault();
+          router.navigate('/customers');
+        });
+
+        document.getElementById('breadcrumbCustomer').addEventListener('click', (e) => {
+          e.preventDefault();
+          router.navigate(`/customers/${customerId}`);
+        });
+
+        // Handle new version button
+        document.getElementById('newVersionButton').addEventListener('click', () => {
+          alert('Nieuwe berekening maken - wordt nog geïmplementeerd');
+        });
+
+        // Handle table events
+        const table = document.getElementById('versionsTable');
+
+        table.addEventListener('row-click', (e) => {
+          alert(`Berekening ${e.detail.rowId} openen - wordt nog geïmplementeerd`);
+        });
+
+        table.addEventListener('sort-change', (e) => {
+          sortColumn = e.detail.column;
+          sortDirection = e.detail.direction;
+          render();
+        });
+
+        table.addEventListener('page-change', (e) => {
+          currentPage = e.detail.page;
+          render();
+        });
+      }
+
+      render();
+    }
+
+    // Start the app
+    init();
+  </script>
 </body>
 </html>

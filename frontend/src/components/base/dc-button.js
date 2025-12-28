@@ -94,16 +94,16 @@ class DcButton extends HTMLElement {
 
         /* Variants */
         .primary {
-          background: var(--color-primary-500);
+          background: var(--color-neutral-900);
           color: var(--color-white);
         }
 
         .primary:hover:not(:disabled) {
-          background: var(--color-primary-600);
+          background: var(--color-neutral-800);
         }
 
         .primary:active:not(:disabled) {
-          background: var(--color-primary-700);
+          background: var(--color-neutral-700);
         }
 
         .secondary {
