@@ -1,0 +1,53 @@
+services:
+  domogo_calculator_postgres:
+    image: docker.io/postgres:15-alpine
+    container_name: domogo-calculator-postgres
+    environment:
+      POSTGRES_DB: calculator
+      POSTGRES_USER: calculator
+      POSTGRES_PASSWORD: calculator
+    volumes:
+      - domogo_calculator_postgres_data:/var/lib/postgresql/data
+      - ./postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U calculator"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  domogo_calculator_postgrest:
+    image: docker.io/postgrest/postgrest:latest
+    container_name: domogo-calculator-postgrest
+    depends_on:
+      - domogo_calculator_postgres
+    environment:
+      PGRST_DB_URI: "postgres://calculator:calculator@domogo_calculator_postgres:5432/calculator"
+      PGRST_DB_SCHEMA: "public"
+      PGRST_DB_ANON_ROLE: "calculator"
+    ports:
+      - "3001:3000"
+    restart: unless-stopped
+
+  domogo_calculator_backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: domogo-calculator-backend
+    depends_on:
+      domogo_calculator_postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: "postgresql://calculator:calculator@domogo_calculator_postgres:5432/calculator"
+      PYTHONUNBUFFERED: "1"
+    volumes:
+      - ./backend:/app
+      - ./Domogo Rendementscalculator versie 67 - Niet beveiligd.xlsx:/app/data/calculator.xlsx:ro
+    ports:
+      - "8000:8000"
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+
+
+volumes:
+  domogo_calculator_postgres_data:
