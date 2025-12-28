@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Navigation Test - Domogo Calculator</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+</head>
+<body>
+  <div id="app">
+    <!-- Top Navigation Header -->
+    <dc-nav-header
+      user-name="Jan de Vries"
+      user-role="advisor"
+      active-route="/dashboard">
+    </dc-nav-header>
+
+    <!-- Main Content with Sidebar -->
+    <div class="layout">
+      <!-- Left Sidebar Navigation -->
+      <dc-sidebar-nav active-section="customer-details">
+        <dc-sidebar-nav-item
+          section="customer-details"
+          label="Klantgegevens"
+          completed>
+        </dc-sidebar-nav-item>
+        <dc-sidebar-nav-item
+          section="household"
+          label="Huishouden">
+        </dc-sidebar-nav-item>
+        <dc-sidebar-nav-item
+          section="energy-contract"
+          label="Energiecontract">
+        </dc-sidebar-nav-item>
+        <dc-sidebar-nav-item
+          section="solar-panels"
+          label="Zonnepanelen">
+        </dc-sidebar-nav-item>
+        <dc-sidebar-nav-item
+          section="battery"
+          label="Batterij">
+        </dc-sidebar-nav-item>
+        <dc-sidebar-nav-item
+          section="calculation"
+          label="Berekening">
+        </dc-sidebar-nav-item>
+      </dc-sidebar-nav>
+
+      <!-- Main Content Area -->
+      <main class="main-content">
+        <div class="container">
+          <h1>Gegevens Verzamelen</h1>
+          <p class="subtitle">Vul de onderstaande gegevens in om de ROI berekening uit te voeren</p>
+
+          <!-- Content sections would go here -->
+          <dc-card>
+            <h2>Klantgegevens</h2>
+            <div class="form-grid">
+              <dc-input
+                label="Naam"
+                type="text"
+                value="Jan de Vries"
+                required>
+              </dc-input>
+              <dc-input
+                label="Email"
+                type="email"
+                value="jan@example.com"
+                required>
+              </dc-input>
+              <dc-input
+                label="Telefoon"
+                type="tel"
+                value="06-12345678">
+              </dc-input>
+              <dc-input
+                label="Postcode"
+                type="text"
+                value="1234AB"
+                required>
+              </dc-input>
+            </div>
+
+            <div class="actions">
+              <dc-button variant="secondary">Annuleren</dc-button>
+              <dc-button variant="primary">Volgende Sectie</dc-button>
+            </div>
+          </dc-card>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+    }
+
+    .layout {
+      display: flex;
+      min-height: calc(100vh - 64px);
+    }
+
+    .main-content {
+      flex: 1;
+      padding: var(--space-8);
+      background-color: var(--color-neutral-50);
+      overflow-y: auto;
+    }
+
+    .container {
+      max-width: 900px;
+    }
+
+    h1 {
+      margin-bottom: var(--space-2);
+    }
+
+    .subtitle {
+      color: var(--color-text-secondary);
+      margin-bottom: var(--space-8);
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: var(--space-4);
+      margin-bottom: var(--space-6);
+    }
+
+    .actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: var(--space-3);
+      padding-top: var(--space-4);
+      border-top: var(--border-width-thin) solid var(--color-border);
+    }
+
+    @media (max-width: 768px) {
+      .form-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+
+  <script type="module" src="/src/main.js"></script>
+
+  <script>
+    // Demo: Handle navigation events
+    document.querySelector('dc-nav-header').addEventListener('navigate', (e) => {
+      console.log('Navigate to:', e.detail.route);
+      // Update active route
+      document.querySelector('dc-nav-header').setAttribute('active-route', e.detail.route);
+    });
+
+    document.querySelector('dc-nav-header').addEventListener('logout', () => {
+      console.log('Logout clicked');
+      alert('Uitloggen functionaliteit wordt nog geïmplementeerd');
+    });
+
+    // Demo: Handle section changes
+    document.querySelector('dc-sidebar-nav').addEventListener('section-change', (e) => {
+      console.log('Section changed to:', e.detail.section);
+      // In a real app, this would load the appropriate form section
+    });
+  </script>
+</body>
+</html>

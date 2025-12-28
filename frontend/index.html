@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Domogo Calculator</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+</head>
+<body>
+  <div id="app">
+    <header>
+      <h1>Domogo Battery ROI Calculator</h1>
+      <dc-language-switcher></dc-language-switcher>
+    </header>
+
+    <main>
+      <div class="container">
+        <h2>Component Test Page</h2>
+
+        <section class="test-section">
+          <h3>Buttons</h3>
+          <dc-button variant="primary" size="md">Primary Button</dc-button>
+          <dc-button variant="secondary" size="md">Secondary Button</dc-button>
+          <dc-button variant="primary" size="sm">Small</dc-button>
+          <dc-button variant="primary" size="lg">Large</dc-button>
+          <dc-button variant="primary" disabled>Disabled</dc-button>
+        </section>
+
+        <section class="test-section">
+          <h3>Inputs</h3>
+          <dc-input label="Email" type="email" placeholder="user@example.com"></dc-input>
+          <dc-input label="Password" type="password"></dc-input>
+          <dc-input label="Number" type="number" placeholder="0"></dc-input>
+        </section>
+
+        <section class="test-section">
+          <h3>Select</h3>
+          <dc-select label="Choose option">
+            <option value="1">Option 1</option>
+            <option value="2">Option 2</option>
+            <option value="3">Option 3</option>
+          </dc-select>
+        </section>
+
+        <section class="test-section">
+          <h3>Card</h3>
+          <dc-card>
+            <h4>Card Title</h4>
+            <p>This is a card component with some content inside.</p>
+            <dc-button variant="primary">Action</dc-button>
+          </dc-card>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Authentication Test - Domogo Calculator</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+</head>
+<body>
+  <div id="app">
+    <dc-auth-form mode="login"></dc-auth-form>
+  </div>
+
+  <script type="module" src="/src/main.js"></script>
+
+  <script>
+    const authForm = document.querySelector('dc-auth-form');
+
+    // Handle form submission
+    authForm.addEventListener('submit', async (e) => {
+      const { mode, data } = e.detail;
+      console.log('Form submitted:', mode, data);
+
+      // Show loading state
+      authForm.setAttribute('loading', '');
+
+      // Simulate API call
+      setTimeout(() => {
+        authForm.removeAttribute('loading');
+
+        // Simulate successful login
+        if (mode === 'login' && data.email === 'demo@domogo.nl' && data.password === 'demo123') {
+          alert('Login succesvol! (Demo)');
+          // In a real app, you would redirect to dashboard here
+        }
+        // Simulate successful registration
+        else if (mode === 'register') {
+          alert('Account aangemaakt! (Demo)');
+          // Switch to login mode
+          authForm.setAttribute('mode', 'login');
+        }
+        // Show error for invalid credentials
+        else {
+          authForm.setAttribute('error', 'Ongeldige inloggegevens. Probeer: demo@domogo.nl / demo123');
+        }
+      }, 1500);
+    });
+
+    // Handle mode change
+    authForm.addEventListener('mode-change', (e) => {
+      console.log('Mode changed to:', e.detail.mode);
+      // Clear any errors when switching modes
+      authForm.removeAttribute('error');
+    });
+
+    // Demo credentials helper
+    console.log('%cDemo Credentials:', 'color: #0ea5e9; font-weight: bold; font-size: 14px;');
+    console.log('Email: demo@domogo.nl');
+    console.log('Password: demo123');
+  </script>
+</body>
+</html>

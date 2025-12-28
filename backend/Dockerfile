@@ -1,10 +1,11 @@
-FROM docker.io/python:3.11-slim
+FROM docker.io/python:3.13-slim
 
 WORKDIR /app
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
     postgresql-client \
+    build-essential \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements first for better caching

@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Domogo Calculator - Consultant Dashboard</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+</head>
+<body>
+  <div id="app"></div>
+
+  <script type="module">
+    import { auth } from './src/utils/auth.js';
+    import { router } from './src/utils/router.js';
+    import {
+      mockCustomers,
+      mockAdvisories,
+      mockVersions,
+      getCustomerById,
+      getAdvisoriesByCustomerId,
+      getAdvisoryById,
+      getVersionsByAdvisoryId
+    } from './src/utils/mock-data.js';
+    import './src/main.js';
+
+    // App state
+    const state = {
+      currentUser: null,
+      currentCustomer: null,
+      currentAdvisory: null,
+      customers: mockCustomers,
+      advisories: mockAdvisories,
+      versions: mockVersions
+    };
+
+    // Initialize app
+    function init() {
+      // Check if user is authenticated
+      if (auth.isAuthenticated()) {
+        state.currentUser = auth.getUser();
+        showApp();
+      } else {
+        showLogin();
+      }
+    }
+
+    // Show login page
+    async function showLogin() {
+      document.getElementById('app').innerHTML = `
+        <dc-auth-form mode="login"></dc-auth-form>
+      `;
+
+      // Wait for component to be defined
+      await customElements.whenDefined('dc-auth-form');
+
+      // Handle login
+      const authForm = document.querySelector('dc-auth-form');
+      authForm.addEventListener('submit', async (e) => {
+        const { mode, data } = e.detail;
+
+        try {
+          if (mode === 'login') {
+            const user = await auth.login(data.email, data.password);
+            state.currentUser = user;
+            showApp();
+          }
+        } catch (error) {
+          authForm.setAttribute('error', error.message);
+        }
+      });
+    }
+
+    // Show main app
+    function showApp() {
+      // Set up router routes
+      router.add('/app.html', () => router.replace('/customers'));
+      router.add('/', () => renderDashboard());
+      router.add('/customers', () => renderDashboard());
+      router.add('/customers/:id', (params) => renderCustomerDetail(params.params.id));
+      router.add('/customers/:customerId/advisories/:advisoryId', (params) =>
+        renderAdvisoryDetail(params.params.customerId, params.params.advisoryId)
+      );
+
+      // Add auth check hook
+      router.beforeNavigate((path) => {
+        if (!auth.isAuthenticated()) {
+          showLogin();
+          return false;
+        }
+        return true;
+      });
+
+      // Start router
+      router.start();
+    }
+
+    // Render dashboard (customers list)
+    function renderDashboard() {
+      // Pagination state
+      let currentPage = 1;
+      const pageSize = 10;
+      let sortColumn = 'name';
+      let sortDirection = 'asc';
+
+      // Sort and paginate data
+      function getSortedCustomers() {
+        const sorted = [...state.customers].sort((a, b) => {
+          const aVal = a[sortColumn];
+          const bVal = b[sortColumn];
+          const modifier = sortDirection === 'asc' ? 1 : -1;
+          return aVal < bVal ? -modifier : modifier;
+        });
+        return sorted;
+      }
+
+      function render() {
+        const sorted = getSortedCustomers();
+        const start = (currentPage - 1) * pageSize;
+        const end = start + pageSize;
+        const page = sorted.slice(start, end);
+
+        document.getElementById('app').innerHTML = `
+          <dc-nav-header
+            user-name="${state.currentUser.name}"
+            user-role="${state.currentUser.role}"
+            active-route="/customers">
+          </dc-nav-header>
+
+          <main style="padding: var(--space-8); background: var(--color-neutral-50); min-height: calc(100vh - 64px);">
+            <div class="container" style="max-width: 1200px;">
+              <div style="margin-bottom: var(--space-6);">
+                <h1 style="margin-bottom: var(--space-2);">Klanten</h1>
+                <p style="color: var(--color-text-secondary);">
+                  Beheer uw klanten en bekijk hun berekeningen
+                </p>
+              </div>
+
+              <dc-table
+                id="customersTable"
+                current-page="${currentPage}"
+                page-size="${pageSize}"
+                total-items="${state.customers.length}"
+                sort-column="${sortColumn}"
+                sort-direction="${sortDirection}">
+                <table slot="table">
+                  <thead>
+                    <tr>
+                      <th data-sortable="name">Naam</th>
+                      <th data-sortable="email">Email</th>
+                      <th data-sortable="city">Stad</th>
+                      <th data-sortable="lastActivity">Laatste activiteit</th>
+                      <th data-sortable="advisoryCount">Adviezen</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${page.map(customer => `
+                      <tr data-row-id="${customer.id}">
+                        <td><strong>${customer.name}</strong></td>
+                        <td>${customer.email}</td>
+                        <td>${customer.city}</td>
+                        <td>${new Date(customer.lastActivity).toLocaleDateString('nl-NL')}</td>
+                        <td>${customer.advisoryCount}</td>
+                      </tr>
+                    `).join('')}
+                  </tbody>
+                </table>
+              </dc-table>
+            </div>
+          </main>
+        `;
+
+        // Handle navigation
+        document.querySelector('dc-nav-header').addEventListener('navigate', (e) => {
+          router.navigate(e.detail.route);
+        });
+
+        document.querySelector('dc-nav-header').addEventListener('logout', () => {
+          auth.logout();
+          showLogin();
+        });
+
+        // Handle table events
+        const table = document.getElementById('customersTable');
+
+        table.addEventListener('row-click', (e) => {
+          router.navigate(`/customers/${e.detail.rowId}`);
+        });
+
+        table.addEventListener('sort-change', (e) => {
+          sortColumn = e.detail.column;
+          sortDirection = e.detail.direction;
+          render();
+        });
+
+        table.addEventListener('page-change', (e) => {
+          currentPage = e.detail.page;
+          render();
+        });
+      }
+
+      render();
+    }
+
+    // Render customer detail page
+    function renderCustomerDetail(customerId) {
+      const customer = getCustomerById(customerId);
+      if (!customer) {
+        renderDashboard();
+        return;
+      }
+
+      const advisories = getAdvisoriesByCustomerId(customerId);
+
+      // Pagination state for advisories
+      let currentPage = 1;
+      const pageSize = 10;
+      let sortColumn = 'createdAt';
+      let sortDirection = 'desc';
+      let expandedAdvisories = new Set(); // Track which advisories are expanded
+      let versionClickHandlerAdded = false; // Track if version click handler is added
+
+      function getSortedAdvisories() {
+        const sorted = [...advisories].sort((a, b) => {
+          const aVal = a[sortColumn];
+          const bVal = b[sortColumn];
+          const modifier = sortDirection === 'asc' ? 1 : -1;
+          return aVal < bVal ? -modifier : modifier;
+        });
+        return sorted;
+      }
+
+      function toggleAdvisory(advisoryId) {
+        if (expandedAdvisories.has(advisoryId)) {
+          expandedAdvisories.delete(advisoryId);
+        } else {
+          expandedAdvisories.add(advisoryId);
+        }
+        render();
+      }
+
+      function getStatusBadge(status) {
+        const badges = {
+          draft: '<span style="padding: 0.25rem 0.75rem; background: var(--color-neutral-200); color: var(--color-neutral-700); border-radius: var(--border-radius-full); font-size: var(--font-size-xs); font-weight: var(--font-weight-medium);">Concept</span>',
+          sent: '<span style="padding: 0.25rem 0.75rem; background: var(--color-primary-100); color: var(--color-primary-700); border-radius: var(--border-radius-full); font-size: var(--font-size-xs); font-weight: var(--font-weight-medium);">Verzonden</span>',
+          approved: '<span style="padding: 0.25rem 0.75rem; background: #dcfce7; color: #15803d; border-radius: var(--border-radius-full); font-size: var(--font-size-xs); font-weight: var(--font-weight-medium);">Goedgekeurd</span>',
+          invalid: '<span style="padding: 0.25rem 0.75rem; background: #fee2e2; color: #991b1b; border-radius: var(--border-radius-full); font-size: var(--font-size-xs); font-weight: var(--font-weight-medium);">Ongeldig</span>',
+          archived: '<span style="padding: 0.25rem 0.75rem; background: var(--color-neutral-100); color: var(--color-neutral-600); border-radius: var(--border-radius-full); font-size: var(--font-size-xs); font-weight: var(--font-weight-medium);">Gearchiveerd</span>'
+        };
+        return badges[status] || status;
+      }
+
+      function render() {
+        const sorted = getSortedAdvisories();
+        const start = (currentPage - 1) * pageSize;
+        const end = start + pageSize;
+        const page = sorted.slice(start, end);
+
+        document.getElementById('app').innerHTML = `
+          <dc-nav-header
+            user-name="${state.currentUser.name}"
+            user-role="${state.currentUser.role}"
+            active-route="/customers">
+          </dc-nav-header>
+
+          <main style="padding: var(--space-8); background: var(--color-neutral-50); min-height: calc(100vh - 64px);">
+            <div class="container" style="max-width: 1200px;">
+              <!-- Back button -->
+              <div style="margin-bottom: var(--space-4);">
+                <dc-button variant="secondary" size="sm" id="backButton">
+                  ← Terug naar klanten
+                </dc-button>
+              </div>
+
+              <!-- Customer details card -->
+              <dc-card style="margin-bottom: var(--space-6);">
+                <h2 style="margin-bottom: var(--space-4);">${customer.name}</h2>
+                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--space-4);">
+                  <div>
+                    <div style="font-size: var(--font-size-sm); color: var(--color-text-secondary); margin-bottom: var(--space-1);">Email</div>
+                    <div>${customer.email}</div>
+                  </div>
+                  <div>
+                    <div style="font-size: var(--font-size-sm); color: var(--color-text-secondary); margin-bottom: var(--space-1);">Telefoon</div>
+                    <div>${customer.phone}</div>
+                  </div>
+                  <div>
+                    <div style="font-size: var(--font-size-sm); color: var(--color-text-secondary); margin-bottom: var(--space-1);">Adres</div>
+                    <div>${customer.address}, ${customer.postalCode} ${customer.city}</div>
+                  </div>
+                  <div>
+                    <div style="font-size: var(--font-size-sm); color: var(--color-text-secondary); margin-bottom: var(--space-1);">Klant sinds</div>
+                    <div>${new Date(customer.createdAt).toLocaleDateString('nl-NL')}</div>
+                  </div>
+                </div>
+              </dc-card>
+
+              <!-- Advisories section -->
+              <div style="margin-bottom: var(--space-4); display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                  <h3 style="margin-bottom: var(--space-1);">Adviezen</h3>
+                  <p style="color: var(--color-text-secondary); font-size: var(--font-size-sm);">
+                    ${advisories.length} ${advisories.length === 1 ? 'advies' : 'adviezen'}
+                  </p>
+                </div>
+                <dc-button variant="primary" id="newAdvisoryButton">
+                  + Nieuw advies
+                </dc-button>
+              </div>
+
+              <dc-table
+                id="advisoriesTable"
+                current-page="${currentPage}"
+                page-size="${pageSize}"
+                total-items="${advisories.length}"
+                sort-column="${sortColumn}"
+                sort-direction="${sortDirection}">
+                <table slot="table">
+                  <thead>
+                    <tr>
+                      <th style="width: 40px;"></th>
+                      <th data-sortable="name">Naam</th>
+                      <th data-sortable="status">Status</th>
+                      <th data-sortable="versionCount">Berekeningen</th>
+                      <th data-sortable="updatedAt">Laatst gewijzigd</th>
+                      <th data-sortable="createdAt">Aangemaakt</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${page.map(advisory => {
+                      const isExpanded = expandedAdvisories.has(advisory.id);
+                      const versions = getVersionsByAdvisoryId(advisory.id);
+
+                      return `
+                        <tr data-row-id="${advisory.id}" style="cursor: pointer;">
+                          <td style="text-align: center;">
+                            <span style="font-size: var(--font-size-lg); color: var(--color-text-secondary);">
+                              ${isExpanded ? '▼' : '▶'}
+                            </span>
+                          </td>
+                          <td><strong>${advisory.name}</strong></td>
+                          <td>${getStatusBadge(advisory.status)}</td>
+                          <td>${advisory.versionCount}</td>
+                          <td>${new Date(advisory.updatedAt).toLocaleDateString('nl-NL')}</td>
+                          <td>${new Date(advisory.createdAt).toLocaleDateString('nl-NL')}</td>
+                        </tr>
+                        ${isExpanded ? `
+                          <tr class="expanded-row" style="background: var(--color-neutral-50);">
+                            <td colspan="6" style="padding: 0;">
+                              <div style="padding: var(--space-4) var(--space-6); border-left: 3px solid var(--color-primary-500);">
+                                <div style="margin-bottom: var(--space-3);">
+                                  <strong style="color: var(--color-text-secondary); font-size: var(--font-size-sm);">
+                                    Berekeningen (${versions.length})
+                                  </strong>
+                                </div>
+                                ${versions.length > 0 ? `
+                                  <table style="width: 100%; border-collapse: collapse;">
+                                    <thead>
+                                      <tr style="border-bottom: var(--border-width-thin) solid var(--color-border);">
+                                        <th style="text-align: left; padding: var(--space-2); font-size: var(--font-size-sm); font-weight: var(--font-weight-semibold); color: var(--color-text-secondary);">Naam</th>
+                                        <th style="text-align: left; padding: var(--space-2); font-size: var(--font-size-sm); font-weight: var(--font-weight-semibold); color: var(--color-text-secondary);">Product</th>
+                                        <th style="text-align: left; padding: var(--space-2); font-size: var(--font-size-sm); font-weight: var(--font-weight-semibold); color: var(--color-text-secondary);">ROI</th>
+                                        <th style="text-align: left; padding: var(--space-2); font-size: var(--font-size-sm); font-weight: var(--font-weight-semibold); color: var(--color-text-secondary);">Terugverdientijd</th>
+                                        <th style="text-align: left; padding: var(--space-2); font-size: var(--font-size-sm); font-weight: var(--font-weight-semibold); color: var(--color-text-secondary);">Status</th>
+                                        <th style="text-align: left; padding: var(--space-2); font-size: var(--font-size-sm); font-weight: var(--font-weight-semibold); color: var(--color-text-secondary);">Laatst gewijzigd</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      ${versions.map(version => `
+                                        <tr style="border-bottom: var(--border-width-thin) solid var(--color-border); cursor: pointer;" class="version-row" data-version-id="${version.id}">
+                                          <td style="padding: var(--space-3) var(--space-2); font-size: var(--font-size-sm);"><strong>${version.name}</strong></td>
+                                          <td style="padding: var(--space-3) var(--space-2); font-size: var(--font-size-sm);">
+                                            ${version.product}<br>
+                                            <small style="color: var(--color-text-secondary);">${version.capacity}</small>
+                                          </td>
+                                          <td style="padding: var(--space-3) var(--space-2); font-size: var(--font-size-sm);">${version.roi}</td>
+                                          <td style="padding: var(--space-3) var(--space-2); font-size: var(--font-size-sm);">${version.paybackYears} jaar</td>
+                                          <td style="padding: var(--space-3) var(--space-2); font-size: var(--font-size-sm);">${getStatusBadge(version.status)}</td>
+                                          <td style="padding: var(--space-3) var(--space-2); font-size: var(--font-size-sm);">${new Date(version.updatedAt).toLocaleDateString('nl-NL')}</td>
+                                        </tr>
+                                      `).join('')}
+                                    </tbody>
+                                  </table>
+                                ` : `
+                                  <p style="color: var(--color-text-secondary); font-size: var(--font-size-sm); padding: var(--space-2);">
+                                    Geen berekeningen gevonden
+                                  </p>
+                                `}
+                              </div>
+                            </td>
+                          </tr>
+                        ` : ''}
+                      `;
+                    }).join('')}
+                  </tbody>
+                </table>
+              </dc-table>
+            </div>
+          </main>
+        `;
+
+        // Handle navigation
+        document.querySelector('dc-nav-header').addEventListener('navigate', (e) => {
+          router.navigate(e.detail.route);
+        });
+
+        document.querySelector('dc-nav-header').addEventListener('logout', () => {
+          auth.logout();
+          showLogin();
+        });
+
+        // Handle back button
+        document.getElementById('backButton').addEventListener('click', () => {
+          router.navigate('/customers');
+        });
+
+        // Handle new advisory button
+        document.getElementById('newAdvisoryButton').addEventListener('click', () => {
+          alert('Nieuw advies maken - wordt nog geïmplementeerd');
+        });
+
+        // Handle table events
+        const table = document.getElementById('advisoriesTable');
+
+        table.addEventListener('row-click', (e) => {
+          // Only toggle if not clicking on an expanded row
+          if (!e.detail.row.classList.contains('expanded-row')) {
+            toggleAdvisory(e.detail.rowId);
+          }
+        });
+
+        table.addEventListener('sort-change', (e) => {
+          sortColumn = e.detail.column;
+          sortDirection = e.detail.direction;
+          render();
+        });
+
+        table.addEventListener('page-change', (e) => {
+          currentPage = e.detail.page;
+          render();
+        });
+
+        // Handle version row clicks (only add once)
+        if (!versionClickHandlerAdded) {
+          document.addEventListener('click', (e) => {
+            const versionRow = e.target.closest('.version-row');
+            if (versionRow) {
+              const versionId = versionRow.getAttribute('data-version-id');
+              alert(`Berekening ${versionId} openen - wordt nog geïmplementeerd`);
+            }
+          });
+          versionClickHandlerAdded = true;
+        }
+      }
+
+      render();
+    }
+
+    // Render advisory detail page with versions
+    function renderAdvisoryDetail(customerId, advisoryId) {
+      const customer = getCustomerById(customerId);
+      const advisory = getAdvisoryById(advisoryId);
+
+      if (!customer || !advisory) {
+        renderDashboard();
+        return;
+      }
+
+      const versions = getVersionsByAdvisoryId(advisoryId);
+
+      // Pagination state for versions
+      let currentPage = 1;
+      const pageSize = 5;
+      let sortColumn = 'createdAt';
+      let sortDirection = 'desc';
+
+      function getSortedVersions() {
+        const sorted = [...versions].sort((a, b) => {
+          const aVal = a[sortColumn];
+          const bVal = b[sortColumn];
+          const modifier = sortDirection === 'asc' ? 1 : -1;
+          return aVal < bVal ? -modifier : modifier;
+        });
+        return sorted;
+      }
+
+      function getStatusBadge(status) {
+        const badges = {
+          draft: '<span style="padding: 0.25rem 0.75rem; background: var(--color-neutral-200); color: var(--color-neutral-700); border-radius: var(--border-radius-full); font-size: var(--font-size-xs); font-weight: var(--font-weight-medium);">Concept</span>',
+          sent: '<span style="padding: 0.25rem 0.75rem; background: var(--color-primary-100); color: var(--color-primary-700); border-radius: var(--border-radius-full); font-size: var(--font-size-xs); font-weight: var(--font-weight-medium);">Verzonden</span>',
+          approved: '<span style="padding: 0.25rem 0.75rem; background: #dcfce7; color: #15803d; border-radius: var(--border-radius-full); font-size: var(--font-size-xs); font-weight: var(--font-weight-medium);">Goedgekeurd</span>',
+          invalid: '<span style="padding: 0.25rem 0.75rem; background: #fee2e2; color: #991b1b; border-radius: var(--border-radius-full); font-size: var(--font-size-xs); font-weight: var(--font-weight-medium);">Ongeldig</span>',
+          archived: '<span style="padding: 0.25rem 0.75rem; background: var(--color-neutral-100); color: var(--color-neutral-600); border-radius: var(--border-radius-full); font-size: var(--font-size-xs); font-weight: var(--font-weight-medium);">Gearchiveerd</span>'
+        };
+        return badges[status] || status;
+      }
+
+      function render() {
+        const sorted = getSortedVersions();
+        const start = (currentPage - 1) * pageSize;
+        const end = start + pageSize;
+        const page = sorted.slice(start, end);
+
+        document.getElementById('app').innerHTML = `
+          <dc-nav-header
+            user-name="${state.currentUser.name}"
+            user-role="${state.currentUser.role}"
+            active-route="/customers">
+          </dc-nav-header>
+
+          <main style="padding: var(--space-8); background: var(--color-neutral-50); min-height: calc(100vh - 64px);">
+            <div class="container" style="max-width: 1200px;">
+              <!-- Breadcrumbs -->
+              <div style="margin-bottom: var(--space-4); display: flex; gap: var(--space-2); align-items: center; font-size: var(--font-size-sm); color: var(--color-text-secondary);">
+                <a href="#/customers" style="color: var(--color-primary-500); text-decoration: none;" id="breadcrumbCustomers">Klanten</a>
+                <span>/</span>
+                <a href="#/customers/${customerId}" style="color: var(--color-primary-500); text-decoration: none;" id="breadcrumbCustomer">${customer.name}</a>
+                <span>/</span>
+                <span style="color: var(--color-text-primary);">${advisory.name}</span>
+              </div>
+
+              <!-- Advisory details card -->
+              <dc-card style="margin-bottom: var(--space-6);">
+                <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: var(--space-4);">
+                  <div>
+                    <h2 style="margin-bottom: var(--space-2);">${advisory.name}</h2>
+                    <div style="display: flex; gap: var(--space-3); align-items: center;">
+                      ${getStatusBadge(advisory.status)}
+                      <span style="color: var(--color-text-secondary); font-size: var(--font-size-sm);">
+                        voor ${customer.name}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-4); margin-top: var(--space-4); padding-top: var(--space-4); border-top: var(--border-width-thin) solid var(--color-border);">
+                  <div>
+                    <div style="font-size: var(--font-size-sm); color: var(--color-text-secondary); margin-bottom: var(--space-1);">Aangemaakt</div>
+                    <div>${new Date(advisory.createdAt).toLocaleDateString('nl-NL')}</div>
+                  </div>
+                  <div>
+                    <div style="font-size: var(--font-size-sm); color: var(--color-text-secondary); margin-bottom: var(--space-1);">Laatst gewijzigd</div>
+                    <div>${new Date(advisory.updatedAt).toLocaleDateString('nl-NL')}</div>
+                  </div>
+                  <div>
+                    <div style="font-size: var(--font-size-sm); color: var(--color-text-secondary); margin-bottom: var(--space-1);">Aantal berekeningen</div>
+                    <div>${advisory.versionCount}</div>
+                  </div>
+                </div>
+              </dc-card>
+
+              <!-- Versions section -->
+              <div style="margin-bottom: var(--space-4); display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                  <h3 style="margin-bottom: var(--space-1);">Berekeningen</h3>
+                  <p style="color: var(--color-text-secondary); font-size: var(--font-size-sm);">
+                    ${versions.length} ${versions.length === 1 ? 'berekening' : 'berekeningen'}
+                  </p>
+                </div>
+                <dc-button variant="primary" id="newVersionButton">
+                  + Nieuwe berekening
+                </dc-button>
+              </div>
+
+              <dc-table
+                id="versionsTable"
+                current-page="${currentPage}"
+                page-size="${pageSize}"
+                total-items="${versions.length}"
+                sort-column="${sortColumn}"
+                sort-direction="${sortDirection}">
+                <table slot="table">
+                  <thead>
+                    <tr>
+                      <th data-sortable="name">Naam</th>
+                      <th data-sortable="product">Product</th>
+                      <th data-sortable="roi">ROI</th>
+                      <th data-sortable="paybackYears">Terugverdientijd</th>
+                      <th data-sortable="status">Status</th>
+                      <th data-sortable="updatedAt">Laatst gewijzigd</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${page.map(version => `
+                      <tr data-row-id="${version.id}">
+                        <td><strong>${version.name}</strong></td>
+                        <td>${version.product}<br><small style="color: var(--color-text-secondary);">${version.capacity}</small></td>
+                        <td>${version.roi}</td>
+                        <td>${version.paybackYears} jaar</td>
+                        <td>${getStatusBadge(version.status)}</td>
+                        <td>${new Date(version.updatedAt).toLocaleDateString('nl-NL')}</td>
+                      </tr>
+                    `).join('')}
+                  </tbody>
+                </table>
+              </dc-table>
+            </div>
+          </main>
+        `;
+
+        // Handle navigation
+        document.querySelector('dc-nav-header').addEventListener('navigate', (e) => {
+          router.navigate(e.detail.route);
+        });
+
+        document.querySelector('dc-nav-header').addEventListener('logout', () => {
+          auth.logout();
+          showLogin();
+        });
+
+        // Handle breadcrumb clicks
+        document.getElementById('breadcrumbCustomers').addEventListener('click', (e) => {
+          e.preventDefault();
+          router.navigate('/customers');
+        });
+
+        document.getElementById('breadcrumbCustomer').addEventListener('click', (e) => {
+          e.preventDefault();
+          router.navigate(`/customers/${customerId}`);
+        });
+
+        // Handle new version button
+        document.getElementById('newVersionButton').addEventListener('click', () => {
+          alert('Nieuwe berekening maken - wordt nog geïmplementeerd');
+        });
+
+        // Handle table events
+        const table = document.getElementById('versionsTable');
+
+        table.addEventListener('row-click', (e) => {
+          alert(`Berekening ${e.detail.rowId} openen - wordt nog geïmplementeerd`);
+        });
+
+        table.addEventListener('sort-change', (e) => {
+          sortColumn = e.detail.column;
+          sortDirection = e.detail.direction;
+          render();
+        });
+
+        table.addEventListener('page-change', (e) => {
+          currentPage = e.detail.page;
+          render();
+        });
+      }
+
+      render();
+    }
+
+    // Start the app
+    init();
+  </script>
+</body>
+</html>

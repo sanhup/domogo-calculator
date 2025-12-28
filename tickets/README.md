@@ -8,6 +8,10 @@ I do want to seperate the question from the tasks and details required to fulfil
 Steps in each ticket:
 1: User describes each ticket
 2: User asks ai to make the ticket totally clear (edit the ticket)
-3: User asks ai to create the tasks and details document
+3: User optionionally asks ai to create the tasks and details document
 4: User makes sure the ticket and details are complete
-5: User asks ai to start implement the ticket.
+5: User asks ai to help implement the ticket.
+6: Test
+7: Mark ticket done and move ticket + any details to done.
+
+Tasks paused for later are put in the backlog folder.

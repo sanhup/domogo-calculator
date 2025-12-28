@@ -1,4 +1,5 @@
 from fastapi import FastAPI, Depends
+from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 from database import get_db, engine
@@ -9,6 +10,19 @@ app = FastAPI(
     title="Domogo Calculator API",
     description="Battery ROI Calculator API",
     version="1.0.0"
+)
+
+# Configure CORS
+# Allow frontend development server and production deployment
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:3000",  # Vite dev server
+        "http://127.0.0.1:3000",  # Alternative localhost
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],  # Allow all HTTP methods
+    allow_headers=["*"],  # Allow all headers
 )
 
 

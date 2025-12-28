@@ -1,0 +1,14 @@
+{
+  "name": "domogo-calculator-frontend",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Battery ROI Calculator Frontend",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "vite": "^7.2.0"
+  }
+}

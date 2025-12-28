@@ -39,7 +39,7 @@ services:
       domogo_calculator_postgres:
         condition: service_healthy
     environment:
-      DATABASE_URL: "postgresql://calculator:calculator@domogo_calculator_postgres:5432/calculator"
+      DATABASE_URL: "postgresql+psycopg://calculator:calculator@domogo_calculator_postgres:5432/calculator"
       PYTHONUNBUFFERED: "1"
     volumes:
       - ./backend:/app

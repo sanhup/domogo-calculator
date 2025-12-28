@@ -56,6 +56,31 @@ Summary results: ROI, payback period, total savings.
 ### CalculationYearlyDetail
 Year-by-year breakdown of performance and savings.
 
+## Calculation Engine
+
+The `calculators/` directory contains pure Python calculation modules (no database dependencies):
+
+### degradation.py
+Battery degradation using annuity-based curves (mirrors Excel CUMIPMT logic). Front-loaded degradation based on guaranteed cycles and residual capacity.
+
+### vat.py
+Dutch VAT refund calculations for four scenarios:
+- **particulier**: Private user, no reclaim
+- **particulier_terugvraag**: Private user with reclaim (max €2494 minus deductions)
+- **zakelijk**: Business user, full reclaim
+- **zakelijk_kor**: Business with KOR exemption
+
+### energy.py
+Energy flow calculations and annual savings based on:
+- Battery operating mode (active trading, self-consumption, peak shaving)
+- Saldering percentage (net metering phase-out)
+- Energy prices and taxes
+
+### roi_calculator.py
+Main ROI orchestrator that combines all calculation modules to produce 20-year projections, payback period, and ROI metrics.
+
+Each calculator module can be run standalone for testing and formula verification.
+
 ## Getting Started
 
 ### 1. Start Services
@@ -113,6 +138,33 @@ alembic current
 
 # Show migration history
 alembic history
+```
+
+## Testing
+
+Run all calculator tests:
+```bash
+podman exec -it domogo-calculator-backend python test_calculator.py
+```
+
+Run specific calculator module tests:
+```bash
+podman exec -it domogo-calculator-backend python -m calculators.degradation
+podman exec -it domogo-calculator-backend python -m calculators.vat
+podman exec -it domogo-calculator-backend python -m calculators.energy
+podman exec -it domogo-calculator-backend python -m calculators.roi_calculator
+```
+
+## Viewing Logs
+
+View backend logs:
+```bash
+podman-compose logs -f domogo_calculator_backend
+```
+
+View all service logs:
+```bash
+podman-compose logs -f
 ```
 
 ## Development Workflow
