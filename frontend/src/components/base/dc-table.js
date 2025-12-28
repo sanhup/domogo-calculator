@@ -359,4 +359,118 @@ class DcTable extends HTMLElement {
   }
 }
 
+// Inject global styles for table content
+// These styles are generic and reusable for any table usage
+// Specific styling (colors, custom layouts) should be done from the consuming page
+if (!document.getElementById('dc-table-global-styles')) {
+  const styleSheet = document.createElement('style');
+  styleSheet.id = 'dc-table-global-styles';
+  styleSheet.textContent = `
+    /* Generic table header styling */
+    .table-header {
+      border-bottom: var(--border-width-thin) solid var(--color-neutral-200);
+      background: var(--color-neutral-50);
+    }
+
+    .table-header th {
+      text-align: left;
+      padding: var(--space-3) var(--space-4);
+      font-size: var(--font-size-xs);
+      font-weight: var(--font-weight-normal);
+      color: var(--color-neutral-600);
+    }
+
+    /* Generic table row styling */
+    .table-row {
+      cursor: pointer;
+      background: var(--color-white);
+      transition: background-color 0.15s;
+    }
+
+    .table-row:hover {
+      background: var(--color-neutral-50);
+    }
+
+    /* Generic table cell styling */
+    .table-cell {
+      padding: var(--space-4);
+      font-size: var(--font-size-sm);
+      max-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .table-cell-flex {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      overflow: hidden;
+    }
+
+    .table-cell-content {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    /* Generic chevron icon for expandable rows */
+    .chevron-icon {
+      flex-shrink: 0;
+      transition: transform 0.2s;
+      color: var(--color-neutral-500);
+    }
+
+    /* Generic expanded row styling */
+    .expanded-row {
+      background: #f8fafc;
+    }
+
+    .expanded-content {
+      margin-left: 32px;
+      margin-right: var(--space-4);
+    }
+
+    /* Generic nested table styling */
+    .nested-table-wrapper {
+      background: white;
+      border: 1px solid var(--color-neutral-200);
+      border-radius: var(--border-radius-lg);
+      overflow: hidden;
+    }
+
+    .nested-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .nested-table-cell {
+      padding: var(--space-4);
+      font-size: var(--font-size-sm);
+      max-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    /* Nested table header override for consistent padding */
+    .nested-table .table-header th {
+      padding: var(--space-4);
+    }
+
+    /* Generic nested row styling */
+    .nested-row {
+      border-bottom: var(--border-width-thin) solid var(--color-neutral-100);
+      cursor: pointer;
+      background: var(--color-white);
+      transition: background-color 0.15s;
+    }
+
+    .nested-row:hover {
+      background: var(--color-neutral-50);
+    }
+  `;
+  document.head.appendChild(styleSheet);
+}
+
 customElements.define('dc-table', DcTable);

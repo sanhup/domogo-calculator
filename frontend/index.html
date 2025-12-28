@@ -155,45 +155,92 @@
             active-route="/customers">
           </dc-nav-header>
 
-          <main style="padding: var(--space-6); background: #f8fafc; min-height: calc(100vh - 64px);">
-            <div class="container" style="max-width: 1200px; margin: 0 auto;">
-              <div style="margin-bottom: var(--space-6);">
-                <h1 style="margin-bottom: var(--space-2);">Klanten</h1>
-                <p style="color: var(--color-text-secondary);">
-                  Beheer uw klanten en bekijk hun berekeningen
-                </p>
-              </div>
+          <style>
+            .page-container {
+              padding: var(--space-6);
+              background: #f8fafc;
+              min-height: calc(100vh - 64px);
+            }
 
-              <dc-table
-                id="customersTable"
-                current-page="${currentPage}"
-                page-size="${pageSize}"
-                total-items="${state.customers.length}"
-                sort-column="${sortColumn}"
-                sort-direction="${sortDirection}">
-                <table slot="table">
-                  <thead>
-                    <tr>
-                      <th data-sortable="name">Naam</th>
-                      <th data-sortable="email">Email</th>
-                      <th data-sortable="city">Stad</th>
-                      <th data-sortable="lastActivity">Laatste activiteit</th>
-                      <th data-sortable="advisoryCount">Adviezen</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    ${page.map(customer => `
-                      <tr data-row-id="${customer.id}">
-                        <td><strong>${customer.name}</strong></td>
-                        <td>${customer.email}</td>
-                        <td>${customer.city}</td>
-                        <td>${new Date(customer.lastActivity).toLocaleDateString('nl-NL')}</td>
-                        <td>${customer.advisoryCount}</td>
+            .content-wrapper {
+              max-width: 1440px;
+              margin: 0 auto;
+            }
+
+            .section-header {
+              margin-bottom: var(--space-4);
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+            }
+
+            .section-title {
+              margin: 0 0 var(--space-1) 0;
+              font-size: var(--font-size-lg);
+              font-weight: var(--font-weight-semibold);
+            }
+
+            .section-subtitle {
+              margin: 0;
+              color: var(--color-text-secondary);
+              font-size: var(--font-size-sm);
+            }
+
+            .header-actions {
+              display: flex;
+              gap: var(--space-2);
+              align-items: center;
+            }
+          </style>
+
+          <main class="page-container">
+            <div class="content-wrapper">
+              <dc-card>
+                <div class="section-header">
+                  <div>
+                    <h3 class="section-title">Klanten</h3>
+                    <p class="section-subtitle">
+                      ${state.customers.length} ${state.customers.length === 1 ? 'klant' : 'klanten'}
+                    </p>
+                  </div>
+                  <div class="header-actions">
+                    <dc-button variant="primary" size="sm" id="newCustomerButton" style="margin: 0; padding: var(--space-2) 0 var(--space-2) var(--space-4); min-width: 140px;">
+                      + Klant aanmaken
+                    </dc-button>
+                  </div>
+                </div>
+
+                <dc-table
+                  id="customersTable"
+                  current-page="${currentPage}"
+                  page-size="${pageSize}"
+                  total-items="${state.customers.length}"
+                  sort-column="${sortColumn}"
+                  sort-direction="${sortDirection}">
+                  <table slot="table">
+                    <thead>
+                      <tr class="table-header">
+                        <th data-sortable="name">Naam</th>
+                        <th data-sortable="email">Email</th>
+                        <th data-sortable="city">Stad</th>
+                        <th data-sortable="lastActivity">Laatste activiteit</th>
+                        <th data-sortable="advisoryCount">Adviezen</th>
                       </tr>
-                    `).join('')}
-                  </tbody>
-                </table>
-              </dc-table>
+                    </thead>
+                    <tbody>
+                      ${page.map(customer => `
+                        <tr class="table-row" data-row-id="${customer.id}">
+                          <td class="table-cell" title="${customer.name}"><strong>${customer.name}</strong></td>
+                          <td class="table-cell" title="${customer.email}">${customer.email}</td>
+                          <td class="table-cell" title="${customer.city}">${customer.city}</td>
+                          <td class="table-cell" title="${new Date(customer.lastActivity).toLocaleDateString('nl-NL')}">${new Date(customer.lastActivity).toLocaleDateString('nl-NL')}</td>
+                          <td class="table-cell" title="${customer.advisoryCount}">${customer.advisoryCount}</td>
+                        </tr>
+                      `).join('')}
+                    </tbody>
+                  </table>
+                </dc-table>
+              </dc-card>
             </div>
           </main>
         `;
@@ -206,6 +253,11 @@
         document.querySelector('dc-nav-header').addEventListener('logout', () => {
           auth.logout();
           showLogin();
+        });
+
+        // Handle new customer button
+        document.getElementById('newCustomerButton').addEventListener('click', () => {
+          alert('Klant aanmaken - wordt nog geïmplementeerd');
         });
 
         // Handle table events
@@ -323,7 +375,7 @@
             }
 
             .content-wrapper {
-              max-width: 1200px;
+              max-width: 1440px;
               margin: 0 auto;
             }
 
@@ -364,92 +416,7 @@
               align-items: center;
             }
 
-            .table-header {
-              border-bottom: var(--border-width-thin) solid var(--color-neutral-200);
-              background: var(--color-neutral-50);
-            }
-
-            .table-header th {
-              text-align: left;
-              padding: var(--space-3) var(--space-4);
-              font-size: var(--font-size-xs);
-              font-weight: var(--font-weight-normal);
-              color: var(--color-neutral-600);
-            }
-
-            .table-cell {
-              padding: var(--space-4);
-              font-size: var(--font-size-sm);
-              max-width: 0;
-              overflow: hidden;
-              text-overflow: ellipsis;
-              white-space: nowrap;
-            }
-
-            .table-cell-flex {
-              display: flex;
-              align-items: center;
-              gap: var(--space-2);
-              overflow: hidden;
-            }
-
-            .table-cell-content {
-              overflow: hidden;
-              text-overflow: ellipsis;
-              white-space: nowrap;
-            }
-
-            .chevron-icon {
-              flex-shrink: 0;
-              transition: transform 0.2s;
-              color: var(--color-neutral-500);
-            }
-
-            .expanded-row {
-              background: #f8fafc;
-            }
-
-            .expanded-content {
-              margin-left: 32px;
-              margin-right: var(--space-4);
-            }
-
-            .nested-table-wrapper {
-              background: white;
-              border: 1px solid var(--color-neutral-200);
-              border-radius: var(--border-radius-lg);
-              overflow: hidden;
-            }
-
-            .nested-table {
-              width: 100%;
-              border-collapse: collapse;
-            }
-
-            .nested-table-cell {
-              padding: var(--space-4);
-              font-size: var(--font-size-sm);
-              max-width: 0;
-              overflow: hidden;
-              text-overflow: ellipsis;
-              white-space: nowrap;
-            }
-
-            .nested-table .table-header th {
-              padding: var(--space-4);
-            }
-
-            .version-row {
-              border-bottom: var(--border-width-thin) solid var(--color-neutral-100);
-              cursor: pointer;
-              background: var(--color-white);
-              transition: background-color 0.15s;
-            }
-
-            .version-row:hover {
-              background: var(--color-neutral-50);
-            }
-
+            /* Page-specific styles for adviezen table */
             .product-info {
               overflow: hidden;
               text-overflow: ellipsis;
@@ -545,7 +512,7 @@
                       const versions = getVersionsByAdvisoryId(advisory.id);
 
                       return `
-                        <tr data-row-id="${advisory.id}" style="cursor: pointer;">
+                        <tr class="table-row" data-row-id="${advisory.id}">
                           <td class="table-cell" title="${advisory.name}">
                             <div class="table-cell-flex">
                               <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" class="chevron-icon" style="transform: ${isExpanded ? 'rotate(90deg)' : 'rotate(0deg)'};">
@@ -578,7 +545,7 @@
                                     </thead>
                                     <tbody>
                                       ${versions.map(version => `
-                                        <tr class="version-row" data-version-id="${version.id}">
+                                        <tr class="nested-row" data-version-id="${version.id}">
                                           <td class="nested-table-cell" title="${version.name}">${version.name}</td>
                                           <td class="nested-table-cell" title="${version.product} - ${version.capacity}">
                                             <div class="product-info">${version.product}</div>
@@ -729,7 +696,7 @@
           </dc-nav-header>
 
           <main style="padding: var(--space-6); background: #f8fafc; min-height: calc(100vh - 64px);">
-            <div class="container" style="max-width: 1200px; margin: 0 auto;">
+            <div class="container" style="max-width: 1440px; margin: 0 auto;">
               <!-- Breadcrumbs -->
               <div style="margin-bottom: var(--space-4); display: flex; gap: var(--space-2); align-items: center; font-size: var(--font-size-sm); color: var(--color-text-secondary);">
                 <a href="#/customers" style="color: var(--color-primary-500); text-decoration: none;" id="breadcrumbCustomers">Klanten</a>

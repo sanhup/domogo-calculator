@@ -113,12 +113,12 @@ class DcNavHeader extends HTMLElement {
           position: sticky;
           top: 0;
           z-index: var(--z-sticky);
+          padding: 0 var(--space-6);
         }
 
         .header-container {
-          max-width: 1200px;
+          max-width: 1440px;
           margin: 0 auto;
-          padding: 0 var(--space-6);
           display: flex;
           align-items: center;
           justify-content: space-between;
