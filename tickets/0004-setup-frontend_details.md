@@ -23,7 +23,11 @@ This document provides detailed specifications, tasks, and implementation guidan
 
 ## Data Model & Hierarchy
 
-### Three-Level Structure: Lead → Advisory → Version
+### Terminology Note
+
+**Customer = Lead:** In the database and backend, we use the term "Customer" (from the existing `customers` table). In the UI and business context, this represents a "Lead" (potential customer/household). These terms are interchangeable throughout this document.
+
+### Three-Level Structure: Customer (Lead) → Advisory → Version
 
 The application uses a three-level data hierarchy to organize customer consultations:
 
@@ -435,8 +439,12 @@ frontend/
 │   ├── pages/                 # Page-level components
 │   │   ├── login-page.js
 │   │   ├── dashboard-page.js
+│   │   ├── customers/         # Customer management pages
+│   │   │   ├── customer-list-page.js
+│   │   │   ├── customer-form-page.js
+│   │   │   └── customer-detail-page.js
 │   │   ├── calculation/       # Calculation wizard pages
-│   │   │   ├── personal-details-page.js
+│   │   │   ├── customer-selection-page.js  # NEW - select customer first
 │   │   │   ├── current-situation-page.js
 │   │   │   ├── future-situation-page.js
 │   │   │   ├── product-selection-page.js
@@ -450,6 +458,7 @@ frontend/
 │   ├── services/              # API and business logic
 │   │   ├── api.js             # Fetch wrapper
 │   │   ├── auth.js            # Authentication
+│   │   ├── customer-api.js    # Customer endpoints (NEW)
 │   │   ├── calculator-api.js  # Calculator endpoints
 │   │   ├── product-api.js     # Product endpoints
 │   │   └── storage.js         # LocalStorage wrapper
@@ -541,18 +550,88 @@ frontend/
   - [ ] `product-api.js`
   - [ ] `customer-api.js`
 
-### Phase 3: Data Collection Forms (Week 3-4)
+### Phase 3: Customer Management & Data Collection Forms (Week 3-4)
 
 #### 3.1 Form Components
 - [ ] `dc-form-section` - Section wrapper with title
 - [ ] `dc-field-group` - Label + input + validation
 - [ ] `dc-validation-message` - Error/warning display
+- [ ] `dc-modal` - Modal dialog component
+- [ ] `dc-table` - Table component for customer list
 - [ ] Create validation utilities
 
-#### 3.2 Calculation Wizard Pages
-Create each page with proper validation:
-- [ ] Personal Details
-  - Name, address, postal code, city, email, phone
+#### 3.2 Customer Management (Do this FIRST)
+Build customer management interface before calculation wizard:
+
+**3.2.1 Customer List Page**
+- [ ] Create `customer-list-page.js`
+- [ ] Display all customers in table format
+  - [ ] Columns: Name, Email, Phone, City, Created Date, Status
+  - [ ] Show only active customers by default
+  - [ ] Option to show archived customers
+  - [ ] Visual indicator for archived status (grayed out)
+- [ ] "New Customer" button
+- [ ] Action buttons per row: View, Edit, Archive/Unarchive
+
+**3.2.2 Customer Search & Filtering**
+- [ ] Add search input (searches name, email, phone, address)
+- [ ] Real-time search (debounced)
+- [ ] Filter by status: Active / Archived / All
+- [ ] Sort by: Name, Created Date, Email
+- [ ] Pagination if customer list is large (optional for now)
+
+**3.2.3 Customer Form (Create/Edit)**
+- [ ] Create `customer-form-page.js` or modal component
+- [ ] Form fields:
+  - [ ] First name (required)
+  - [ ] Last name (required)
+  - [ ] Email (required, validated)
+  - [ ] Phone (required)
+  - [ ] Street address (required)
+  - [ ] House number (required)
+  - [ ] Postal code (required, Dutch format validation)
+  - [ ] City (required)
+  - [ ] Notes (optional, textarea)
+- [ ] Validation on all required fields
+- [ ] Email format validation
+- [ ] Dutch postal code format (1234AB)
+- [ ] Save button
+- [ ] Cancel button
+
+**3.2.4 Customer Archive/Unarchive**
+- [ ] Archive button on customer detail/list
+  - [ ] Confirmation modal: "Are you sure you want to archive [Customer Name]?"
+  - [ ] Sets `archived` flag to true
+  - [ ] Does NOT delete from database
+- [ ] Unarchive button (only visible for archived customers)
+  - [ ] Sets `archived` flag to false
+- [ ] Archived customers:
+  - [ ] Still visible in "Show Archived" view
+  - [ ] Cannot be selected for new calculations
+  - [ ] Existing calculations remain intact
+
+**3.2.5 Customer API Integration**
+- [ ] Create `customer-api.js` service
+  - [ ] `getCustomers(filters)` - List with search/filter
+  - [ ] `getCustomer(id)` - Get single customer
+  - [ ] `createCustomer(data)` - Create new
+  - [ ] `updateCustomer(id, data)` - Update existing
+  - [ ] `archiveCustomer(id)` - Mark as archived
+  - [ ] `unarchiveCustomer(id)` - Mark as active
+
+**Backend Requirements for Customer Management:**
+- [ ] Customer CRUD endpoints
+- [ ] Search/filter support (query params)
+- [ ] Add `archived` boolean field to Customer model
+- [ ] Default `archived = false` on creation
+- [ ] Ensure archived customers excluded from active lists by default
+
+#### 3.3 Calculation Wizard Pages
+Create each page with proper validation (AFTER customer management):
+- [ ] Customer Selection (NEW - first step)
+  - Select existing customer from dropdown/searchable list
+  - Quick "Create New Customer" button
+  - Cannot proceed without customer selected
 - [ ] Current Situation
   - Grid consumption, feed-in, solar production
 - [ ] Future Situation
@@ -574,7 +653,7 @@ Create each page with proper validation:
   - Financing duration, interest rate
   - Monthly payment calculation
 
-#### 3.3 Data Persistence
+#### 3.4 Data Persistence
 - [ ] Implement draft save (localStorage + backend)
 - [ ] Auto-save every 30 seconds
 - [ ] Load draft on page load

@@ -1,9 +1,14 @@
-from sqlalchemy import Column, Integer, String, DateTime
-from sqlalchemy.sql import func
+from sqlalchemy import Column, Integer, String, Boolean
 from database import Base
+from models.mixins import TimestampMixin
 
 
-class Customer(Base):
+class Customer(Base, TimestampMixin):
+    """
+    Customer model representing a lead or customer in the system.
+
+    Inherits created_at and updated_at fields from TimestampMixin.
+    """
     __tablename__ = "customers"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -16,9 +21,12 @@ class Customer(Base):
     email = Column(String, index=True)
     phone = Column(String)
 
-    # Metadata
-    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    # Status
+    archived = Column(Boolean, default=False, nullable=False, index=True)
+
+    # Timestamps inherited from TimestampMixin:
+    # - created_at
+    # - updated_at
 
     def __repr__(self):
-        return f"<Customer(id={self.id}, name='{self.full_name}')>"
+        return f"<Customer(id={self.id}, name='{self.full_name}', archived={self.archived})>"

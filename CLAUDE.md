@@ -2,6 +2,55 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## 🚨 IMPORTANT: Workflow for Every Session
+
+**At the start of EVERY session, Claude must:**
+
+1. **Read this file (CLAUDE.md) completely** to understand project conventions, patterns, and requirements
+2. Review recent changes (git log, open tickets) to understand current state
+3. Only then begin implementing features or making changes
+
+**This ensures consistency with:**
+- Established code patterns (mixins, logging, soft deletes)
+- Project-specific conventions (Dutch postal codes, decimal precision, etc.)
+- Documentation standards
+- Testing expectations
+
+## 📝 Documentation Standards
+
+**When modifying existing code, ALWAYS update:**
+
+1. **Docstrings** - Module, class, and function documentation
+2. **Inline comments** - Especially for complex business logic
+3. **Type hints** - Keep them accurate and complete
+4. **README files** - If behavior changes affect usage
+
+**Common mistakes to avoid:**
+- ❌ Updating a class to use a mixin but not updating the docstring
+- ❌ Adding new fields without documenting their purpose
+- ❌ Changing function signatures without updating docstrings
+- ❌ Removing functionality without updating documentation
+
+**Example of proper updates:**
+```python
+# BEFORE
+class Customer(Base):
+    """Customer model."""
+    created_at = Column(DateTime, ...)
+    updated_at = Column(DateTime, ...)
+
+# AFTER (using mixin)
+class Customer(Base, TimestampMixin):
+    """
+    Customer model representing a lead or customer in the system.
+
+    Inherits created_at and updated_at fields from TimestampMixin.
+    """
+    # Timestamps inherited from TimestampMixin:
+    # - created_at
+    # - updated_at
+```
+
 ## Project Overview
 
 **Domogo Calculator** is a Battery ROI (Return on Investment) calculator for home battery systems in the Dutch market. The project migrates a complex Excel-based financial model into a web application with PostgreSQL database, Python/FastAPI backend, and comprehensive calculation engine.
@@ -146,6 +195,156 @@ See `backend/README.md` for model descriptions. Key patterns to remember:
 - Calculators are pure Python functions (no database dependencies)
 - Services layer (future) will bridge models and calculators
 - Type hints on all function parameters
+
+### Model Conventions
+
+**Timestamp Fields:**
+- All models that need timestamps should inherit from `TimestampMixin`
+- This provides `created_at` and `updated_at` fields automatically
+- Never manually define these fields - always use the mixin
+
+Example:
+```python
+from models.mixins import TimestampMixin
+
+class MyModel(Base, TimestampMixin):
+    __tablename__ = "my_table"
+    id = Column(Integer, primary_key=True)
+    # ... other fields
+    # created_at and updated_at inherited from TimestampMixin
+```
+
+**Soft Deletes:**
+- Use `archived` boolean field for soft deletes (never hard delete data)
+- Default to `False`, index the field for performance
+- Filter archived records by default in list queries
+
+### Frontend Patterns
+
+**Component Architecture:**
+- Use Web Components (Custom Elements) for page-level components
+- Place page components in `frontend/src/pages/`
+- Place reusable UI components in `frontend/src/components/`
+- **Do NOT use Shadow DOM** for page components (breaks global styles and dc-table integration)
+- Only use Shadow DOM for truly isolated design system primitives
+
+**Form Change Tracking:**
+
+All form components that edit existing data **must** use `FormChangeTracker` to prevent accidental saves.
+
+**Import and instantiate:**
+```javascript
+import { FormChangeTracker } from '../../utils/form-change-tracker.js';
+
+class MyFormPage extends HTMLElement {
+  constructor() {
+    super();
+    this.changeTracker = new FormChangeTracker(this);
+    // ... other properties
+  }
+}
+```
+
+**Usage pattern:**
+```javascript
+// 1. When loading data for edit mode
+async loadData() {
+  const data = await fetchData();
+  this.changeTracker.setOriginalData(data);  // Sets baseline for comparison
+}
+
+// 2. In render method, after setting up form
+render() {
+  this.innerHTML = `<form id="myForm">...</form>`;
+  this.changeTracker.setupListeners('#myForm');  // Auto-detects changes
+}
+```
+
+**Behavior:**
+- **Edit mode**: Save button starts disabled, enables only when fields change
+- **Create mode**: Save button always enabled
+- Compares trimmed values (ignores whitespace-only changes)
+- Works with both `dc-input` components (uses `getValue()` method) and native HTML inputs (uses `.value` property)
+
+**Available methods:**
+- `setOriginalData(data, fieldNames?)` - Set baseline data for comparison
+- `setupListeners(selector)` - Attach change listeners to form inputs
+- `checkChanges(selector)` - Manually check for changes (returns boolean)
+- `updateSaveButton()` - Manually update button enabled/disabled state
+- `reset()` - Reset tracking after successful save
+
+**Requirements:**
+- Submit button must have `type="submit"` and be a `dc-button`
+- Form must have an `id` or unique selector
+- Call `setupListeners()` after rendering form HTML
+
+### Logging Conventions
+
+**Always use structured logging** with context fields for observability.
+
+**Import and initialize:**
+```python
+from logging_config import get_logger
+
+logger = get_logger(__name__)
+```
+
+**Usage examples:**
+```python
+# Good: Include context fields
+logger.info("Customer created", customer_id=123, customer_name="Jan de Vries")
+logger.warning("Invalid postal code", postal_code="1234", expected_format="1234AB")
+logger.error("Database connection failed", db_host="localhost", retry_count=3)
+
+# Bad: Don't use string formatting in message
+logger.info(f"Customer {customer_id} created")  # ❌ Loses structure
+```
+
+**Log Levels:**
+- `DEBUG`: Detailed diagnostic information (development only)
+- `INFO`: General operational events (user actions, system events)
+- `WARNING`: Unexpected but handled situations (validation errors, retries)
+- `ERROR`: Errors that need attention (failed operations, exceptions)
+- `CRITICAL`: System-critical failures (database down, service unavailable)
+
+**Environment Modes:**
+- **Development** (`ENVIRONMENT=development`): Pretty-printed colored console logs
+- **Production** (`ENVIRONMENT=production`): JSON-structured logs for observability platforms
+
+**What to log:**
+- User actions (create, update, delete, archive)
+- API requests with key parameters
+- Validation failures
+- External service calls
+- Performance metrics (optional: duration, size)
+- Errors and exceptions (always with context)
+
+**What NOT to log:**
+- Passwords, tokens, or sensitive data
+- Full request/response bodies (unless debugging)
+- PII without proper masking
+- High-frequency events that create noise
+
+### Seed Data
+
+**Location:** `backend/seeds/`
+
+**Running seeds:**
+```bash
+# Run all seeds
+podman exec -it domogo-calculator-backend python seeds/run_all_seeds.py
+
+# Run individual seed
+podman exec -it domogo-calculator-backend python seeds/seed_customers.py
+```
+
+**Creating new seed files:**
+1. Create `seed_<name>.py` in `backend/seeds/`
+2. Implement a function that takes `db` session parameter
+3. Add to `run_all_seeds.py`
+4. Include sample data with realistic Dutch names/addresses
+5. Check for existing data before inserting
+6. Use transactions and commit explicitly
 
 ## Testing Strategy
 

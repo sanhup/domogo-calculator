@@ -16,6 +16,7 @@ import './components/base/dc-select.js';
 import './components/base/dc-card.js';
 import './components/base/dc-language-switcher.js';
 import './components/base/dc-table.js';
+import './components/base/dc-modal.js';
 
 // Import navigation components
 import './components/navigation/dc-nav-header.js';
@@ -23,6 +24,10 @@ import './components/navigation/dc-sidebar-nav.js';
 
 // Import auth components
 import './components/auth/dc-auth-form.js';
+
+// Import page components
+import './pages/customers/customer-list-page.js';
+import './pages/customers/customer-form-page.js';
 
 // Initialize application
 console.log('Domogo Calculator frontend initialized');

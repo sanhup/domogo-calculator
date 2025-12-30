@@ -128,15 +128,38 @@ See `0004-setup-frontend_details.md` for:
 
 ## Acceptance Criteria
 
+**Authentication & Access:**
 - [ ] All three user types can login with appropriate access
+- [ ] Role-based navigation shows correct menu items
+
+**Customer Management (NEW - Priority):**
+- [ ] Advisors can view list of all customers
+- [ ] Advisors can search customers by name, email, phone, or address
+- [ ] Advisors can filter customers by status (Active/Archived/All)
+- [ ] Advisors can create new customers with all required fields
+- [ ] Advisors can edit existing customer information
+- [ ] Advisors can archive customers (with confirmation)
+- [ ] Advisors can unarchive customers
+- [ ] Archived customers are visually distinct in list view
+- [ ] Archived customers cannot be selected for new calculations
+- [ ] Customer data validates properly (email format, Dutch postal code)
+
+**Calculations & Offers:**
+- [ ] Advisors can select a customer before starting calculation wizard
 - [ ] Advisors can complete full calculation wizard
 - [ ] ROI calculation executes and displays results
 - [ ] Offers can be generated as PDF
 - [ ] Offers can be emailed to customers
 - [ ] Customers can view their offers
+
+**Admin:**
 - [ ] Admin can manage users and master data
+
+**Internationalization:**
 - [ ] UI is available in Dutch and English
 - [ ] All numbers/currencies format correctly per locale
+
+**Technical:**
 - [ ] Application works on modern browsers (Chrome, Firefox, Safari, Edge)
 - [ ] Mobile responsive design
 - [ ] Keyboard navigation works
@@ -156,13 +179,31 @@ See `0004-setup-frontend_details.md` for:
 ## Backend Requirements
 
 New endpoints needed:
+
+**Authentication:**
 - [ ] Authentication (login, logout, refresh)
 - [ ] User management (CRUD for advisors)
 - [ ] Customer portal access
+- [ ] Role-based authorization middleware
+
+**Customer Management (NEW - Priority):**
+- [ ] GET `/api/customers` - List customers with search/filter support
+  - [ ] Query params: `search`, `archived`, `sort_by`, `limit`, `offset`
+  - [ ] Default: only return active customers (`archived=false`)
+- [ ] GET `/api/customers/:id` - Get single customer
+- [ ] POST `/api/customers` - Create new customer
+- [ ] PUT `/api/customers/:id` - Update customer
+- [ ] POST `/api/customers/:id/archive` - Mark customer as archived
+- [ ] POST `/api/customers/:id/unarchive` - Mark customer as active
+- [ ] Add `archived` boolean field to Customer model (default: false)
+
+**Calculations:**
 - [ ] Draft calculation save/load
+- [ ] Link calculations to customer ID
+
+**Offers:**
 - [ ] PDF generation with locale parameter
 - [ ] Email sending with multi-language templates
-- [ ] Role-based authorization middleware
 
 ## Related Documents
 

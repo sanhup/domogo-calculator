@@ -120,6 +120,19 @@ class DcButton extends HTMLElement {
           background: var(--color-primary-100);
         }
 
+        .dark {
+          background: var(--color-dark-surface);
+          color: var(--color-white);
+        }
+
+        .dark:hover:not(:disabled) {
+          background: var(--color-dark-surface-hover);
+        }
+
+        .dark:active:not(:disabled) {
+          background: var(--color-neutral-700);
+        }
+
         /* Sizes */
         .sm {
           padding: var(--space-2) var(--space-3);

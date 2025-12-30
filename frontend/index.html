@@ -14,6 +14,7 @@
 
     import { auth } from './src/utils/auth.js';
     import { router } from './src/utils/router.js';
+    import { getCustomer } from './src/services/customer-api.js';
     import {
       mockCustomers,
       mockAdvisories,
@@ -101,6 +102,11 @@
       router.add('/app.html', () => router.replace('/customers'));
       router.add('/', () => router.replace('/customers'));
       router.add('/customers', () => renderDashboard());
+      router.add('/customers/new', () => renderCustomerForm());
+      router.add('/customers/:id/edit', (params) => {
+        console.log('Customer edit route matched:', params);
+        renderCustomerForm(params.params.id);
+      });
       router.add('/customers/:id', (params) => {
         console.log('Customer detail route matched:', params);
         renderCustomerDetail(params.params.id);
@@ -125,522 +131,211 @@
 
     // Render dashboard (customers list)
     function renderDashboard() {
-      // Pagination state
-      let currentPage = 1;
-      const pageSize = 10;
-      let sortColumn = 'name';
-      let sortDirection = 'asc';
+      document.getElementById('app').innerHTML = `
+        <dc-nav-header
+          user-name="${state.currentUser.name}"
+          user-role="${state.currentUser.role}"
+          active-route="/customers">
+        </dc-nav-header>
+        <customer-list-page></customer-list-page>
+      `;
 
-      // Sort and paginate data
-      function getSortedCustomers() {
-        const sorted = [...state.customers].sort((a, b) => {
-          const aVal = a[sortColumn];
-          const bVal = b[sortColumn];
-          const modifier = sortDirection === 'asc' ? 1 : -1;
-          return aVal < bVal ? -modifier : modifier;
-        });
-        return sorted;
-      }
+      // Handle navigation
+      document.querySelector('dc-nav-header').addEventListener('navigate', (e) => {
+        router.navigate(e.detail.route);
+      });
 
-      function render() {
-        const sorted = getSortedCustomers();
-        const start = (currentPage - 1) * pageSize;
-        const end = start + pageSize;
-        const page = sorted.slice(start, end);
+      document.querySelector('dc-nav-header').addEventListener('logout', () => {
+        auth.logout();
+        showLogin();
+      });
 
-        document.getElementById('app').innerHTML = `
-          <dc-nav-header
-            user-name="${state.currentUser.name}"
-            user-role="${state.currentUser.role}"
-            active-route="/customers">
-          </dc-nav-header>
+      // Handle customer list navigation
+      const customerList = document.querySelector('customer-list-page');
+      customerList.addEventListener('navigate', (e) => {
+        const { route } = e.detail;
+        router.navigate(route);
+      });
+    }
 
-          <style>
-            .page-container {
-              padding: var(--space-6);
-              background: #f8fafc;
-              min-height: calc(100vh - 64px);
-            }
+    // Render customer form (create or edit)
+    function renderCustomerForm(customerId = null) {
+      document.getElementById('app').innerHTML = `
+        <dc-nav-header
+          user-name="${state.currentUser.name}"
+          user-role="${state.currentUser.role}"
+          active-route="/customers">
+        </dc-nav-header>
+        <customer-form-page ${customerId ? `customer-id="${customerId}"` : ''}></customer-form-page>
+      `;
 
-            .content-wrapper {
-              max-width: 1440px;
-              margin: 0 auto;
-            }
+      // Handle navigation
+      document.querySelector('dc-nav-header').addEventListener('navigate', (e) => {
+        router.navigate(e.detail.route);
+      });
 
-            .section-header {
-              margin-bottom: var(--space-4);
-              display: flex;
-              justify-content: space-between;
-              align-items: center;
-            }
+      document.querySelector('dc-nav-header').addEventListener('logout', () => {
+        auth.logout();
+        showLogin();
+      });
 
-            .section-title {
-              margin: 0 0 var(--space-1) 0;
-              font-size: var(--font-size-lg);
-              font-weight: var(--font-weight-semibold);
-            }
-
-            .section-subtitle {
-              margin: 0;
-              color: var(--color-text-secondary);
-              font-size: var(--font-size-sm);
-            }
-
-            .header-actions {
-              display: flex;
-              gap: var(--space-2);
-              align-items: center;
-            }
-          </style>
-
-          <main class="page-container">
-            <div class="content-wrapper">
-              <dc-card>
-                <div class="section-header">
-                  <div>
-                    <h3 class="section-title">Klanten</h3>
-                    <p class="section-subtitle">
-                      ${state.customers.length} ${state.customers.length === 1 ? 'klant' : 'klanten'}
-                    </p>
-                  </div>
-                  <div class="header-actions">
-                    <dc-button variant="primary" size="sm" id="newCustomerButton" style="margin: 0; padding: var(--space-2) 0 var(--space-2) var(--space-4); min-width: 140px;">
-                      + Klant aanmaken
-                    </dc-button>
-                  </div>
-                </div>
-
-                <dc-table
-                  id="customersTable"
-                  current-page="${currentPage}"
-                  page-size="${pageSize}"
-                  total-items="${state.customers.length}"
-                  sort-column="${sortColumn}"
-                  sort-direction="${sortDirection}">
-                  <table slot="table">
-                    <thead>
-                      <tr class="table-header">
-                        <th data-sortable="name">Naam</th>
-                        <th data-sortable="email">Email</th>
-                        <th data-sortable="city">Stad</th>
-                        <th data-sortable="lastActivity">Laatste activiteit</th>
-                        <th data-sortable="advisoryCount">Adviezen</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      ${page.map(customer => `
-                        <tr class="table-row" data-row-id="${customer.id}">
-                          <td class="table-cell" title="${customer.name}"><strong>${customer.name}</strong></td>
-                          <td class="table-cell" title="${customer.email}">${customer.email}</td>
-                          <td class="table-cell" title="${customer.city}">${customer.city}</td>
-                          <td class="table-cell" title="${new Date(customer.lastActivity).toLocaleDateString('nl-NL')}">${new Date(customer.lastActivity).toLocaleDateString('nl-NL')}</td>
-                          <td class="table-cell" title="${customer.advisoryCount}">${customer.advisoryCount}</td>
-                        </tr>
-                      `).join('')}
-                    </tbody>
-                  </table>
-                </dc-table>
-              </dc-card>
-            </div>
-          </main>
-        `;
-
-        // Handle navigation
-        document.querySelector('dc-nav-header').addEventListener('navigate', (e) => {
-          router.navigate(e.detail.route);
-        });
-
-        document.querySelector('dc-nav-header').addEventListener('logout', () => {
-          auth.logout();
-          showLogin();
-        });
-
-        // Handle new customer button
-        document.getElementById('newCustomerButton').addEventListener('click', () => {
-          alert('Klant aanmaken - wordt nog geïmplementeerd');
-        });
-
-        // Handle table events
-        const table = document.getElementById('customersTable');
-
-        table.addEventListener('row-click', (e) => {
-          router.navigate(`/customers/${e.detail.rowId}`);
-        });
-
-        table.addEventListener('sort-change', (e) => {
-          sortColumn = e.detail.column;
-          sortDirection = e.detail.direction;
-          render();
-        });
-
-        table.addEventListener('page-change', (e) => {
-          currentPage = e.detail.page;
-          render();
-        });
-      }
-
-      render();
+      // Handle customer form navigation
+      const customerForm = document.querySelector('customer-form-page');
+      customerForm.addEventListener('navigate', (e) => {
+        const { route } = e.detail;
+        router.navigate(route);
+      });
     }
 
     // Render customer detail page
-    function renderCustomerDetail(customerId) {
-      console.log('renderCustomerDetail called with ID:', customerId, 'type:', typeof customerId);
-      const customer = getCustomerById(customerId);
-      console.log('Found customer:', customer);
-      if (!customer) {
-        console.log('Customer not found, redirecting to dashboard');
-        renderDashboard();
+    async function renderCustomerDetail(customerId) {
+      // Show loading state
+      document.getElementById('app').innerHTML = `
+        <dc-nav-header
+          user-name="${state.currentUser.name}"
+          user-role="${state.currentUser.role}"
+          active-route="/customers">
+        </dc-nav-header>
+        <div style="padding: var(--space-6); text-align: center;">
+          <p>Laden...</p>
+        </div>
+      `;
+
+      // Handle navigation
+      document.querySelector('dc-nav-header').addEventListener('navigate', (e) => {
+        router.navigate(e.detail.route);
+      });
+
+      document.querySelector('dc-nav-header').addEventListener('logout', () => {
+        auth.logout();
+        showLogin();
+      });
+
+      // Fetch customer from API
+      let customer;
+      try {
+        customer = await getCustomer(customerId);
+      } catch (error) {
+        console.error('Failed to load customer:', error);
+        alert('Fout bij het laden van klantgegevens');
+        router.navigate('/customers');
         return;
       }
 
-      const advisories = getAdvisoriesByCustomerId(customerId);
+      // Render customer detail
+      document.getElementById('app').innerHTML = `
+        <dc-nav-header
+          user-name="${state.currentUser.name}"
+          user-role="${state.currentUser.role}"
+          active-route="/customers">
+        </dc-nav-header>
 
-      // Pagination state for advisories
-      let currentPage = 1;
-      const pageSize = 10;
-      let sortColumn = 'updatedAt';
-      let sortDirection = 'desc';
+        <style>
+          .page-container {
+            padding: var(--space-6);
+            background: #f8fafc;
+            min-height: calc(100vh - 64px);
+          }
 
-      // Find the latest advisory (most recent updatedAt)
-      const latestAdvisory = advisories.length > 0
-        ? advisories.reduce((latest, current) =>
-            new Date(current.updatedAt) > new Date(latest.updatedAt) ? current : latest
-          )
-        : null;
+          .content-wrapper {
+            max-width: 1440px;
+            margin: 0 auto;
+          }
 
-      let expandedAdvisories = new Set(latestAdvisory ? [latestAdvisory.id] : []); // Expand latest by default
-      let allExpanded = false;
-      let versionClickHandlerAdded = false; // Track if version click handler is added
+          .back-link {
+            color: var(--color-neutral-600);
+            text-decoration: none;
+            font-size: var(--font-size-sm);
+            font-weight: var(--font-weight-medium);
+            transition: color 0.15s;
+          }
 
-      function getSortedAdvisories() {
-        const sorted = [...advisories].sort((a, b) => {
-          const aVal = a[sortColumn];
-          const bVal = b[sortColumn];
-          const modifier = sortDirection === 'asc' ? 1 : -1;
-          return aVal < bVal ? -modifier : modifier;
-        });
-        return sorted;
-      }
+          .back-link:hover {
+            color: var(--color-neutral-900);
+          }
 
-      function toggleAdvisory(advisoryId) {
-        if (expandedAdvisories.has(advisoryId)) {
-          expandedAdvisories.delete(advisoryId);
-        } else {
-          expandedAdvisories.add(advisoryId);
-        }
-        allExpanded = expandedAdvisories.size === advisories.length;
-        render();
-      }
+          .empty-state {
+            text-align: center;
+            padding: var(--space-8);
+            color: var(--color-text-secondary);
+            background: var(--color-neutral-50);
+            border-radius: var(--border-radius-md);
+          }
+        </style>
 
-      function toggleAllAdvisories() {
-        if (allExpanded) {
-          expandedAdvisories.clear();
-          allExpanded = false;
-        } else {
-          advisories.forEach(advisory => expandedAdvisories.add(advisory.id));
-          allExpanded = true;
-        }
-        render();
-      }
+        <main class="page-container">
+          <div class="content-wrapper">
+            <!-- Back button -->
+            <div style="margin-bottom: var(--space-4);">
+              <a href="#" id="backButton" class="back-link">
+                ← Terug naar klanten
+              </a>
+            </div>
 
-      function getStatusBadge(status) {
-        const badges = {
-          draft: '<span style="padding: 0.25rem 0.75rem; background: var(--color-neutral-200); color: var(--color-neutral-700); border-radius: var(--border-radius-full); font-size: var(--font-size-xs); font-weight: var(--font-weight-medium);">Concept</span>',
-          sent: '<span style="padding: 0.25rem 0.75rem; background: var(--color-primary-100); color: var(--color-primary-700); border-radius: var(--border-radius-full); font-size: var(--font-size-xs); font-weight: var(--font-weight-medium);">Verzonden</span>',
-          approved: '<span style="padding: 0.25rem 0.75rem; background: #dcfce7; color: #15803d; border-radius: var(--border-radius-full); font-size: var(--font-size-xs); font-weight: var(--font-weight-medium);">Goedgekeurd</span>',
-          invalid: '<span style="padding: 0.25rem 0.75rem; background: #fee2e2; color: #991b1b; border-radius: var(--border-radius-full); font-size: var(--font-size-xs); font-weight: var(--font-weight-medium);">Ongeldig</span>',
-          archived: '<span style="padding: 0.25rem 0.75rem; background: var(--color-neutral-100); color: var(--color-neutral-600); border-radius: var(--border-radius-full); font-size: var(--font-size-xs); font-weight: var(--font-weight-medium);">Gearchiveerd</span>'
-        };
-        return badges[status] || status;
-      }
-
-      function render() {
-        const sorted = getSortedAdvisories();
-        const start = (currentPage - 1) * pageSize;
-        const end = start + pageSize;
-        const page = sorted.slice(start, end);
-
-        document.getElementById('app').innerHTML = `
-          <dc-nav-header
-            user-name="${state.currentUser.name}"
-            user-role="${state.currentUser.role}"
-            active-route="/customers">
-          </dc-nav-header>
-
-          <style>
-            .page-container {
-              padding: var(--space-6);
-              background: #f8fafc;
-              min-height: calc(100vh - 64px);
-            }
-
-            .content-wrapper {
-              max-width: 1440px;
-              margin: 0 auto;
-            }
-
-            .back-link {
-              color: var(--color-neutral-600);
-              text-decoration: none;
-              font-size: var(--font-size-sm);
-              font-weight: var(--font-weight-medium);
-              transition: color 0.15s;
-            }
-
-            .back-link:hover {
-              color: var(--color-neutral-900);
-            }
-
-            .section-header {
-              margin-bottom: var(--space-4);
-              display: flex;
-              justify-content: space-between;
-              align-items: center;
-            }
-
-            .section-title {
-              margin: 0 0 var(--space-1) 0;
-              font-size: var(--font-size-lg);
-              font-weight: var(--font-weight-semibold);
-            }
-
-            .section-subtitle {
-              margin: 0;
-              color: var(--color-text-secondary);
-              font-size: var(--font-size-sm);
-            }
-
-            .header-actions {
-              display: flex;
-              gap: var(--space-2);
-              align-items: center;
-            }
-
-            /* Page-specific styles for adviezen table */
-            .product-info {
-              overflow: hidden;
-              text-overflow: ellipsis;
-              white-space: nowrap;
-            }
-
-            .product-capacity {
-              color: var(--color-neutral-600);
-              font-size: var(--font-size-xs);
-              margin-top: 2px;
-              overflow: hidden;
-              text-overflow: ellipsis;
-              white-space: nowrap;
-            }
-
-            .roi-cell {
-              color: #059669;
-              font-weight: var(--font-weight-medium);
-            }
-          </style>
-
-          <main class="page-container">
-            <div class="content-wrapper">
-              <!-- Back button -->
-              <div style="margin-bottom: var(--space-4);">
-                <a href="#" id="backButton" class="back-link">
-                  ← Terug naar klanten
-                </a>
+            <!-- Customer details card -->
+            <dc-card style="margin-bottom: var(--space-6);">
+              <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: var(--space-4);">
+                <h2 style="margin: 0;">${customer.full_name}</h2>
+                <dc-button variant="secondary" size="sm" id="editButton">
+                  Bewerken
+                </dc-button>
               </div>
-
-              <!-- Customer details card -->
-              <dc-card style="margin-bottom: var(--space-6);">
-                <h2 style="margin-bottom: var(--space-4);">${customer.name}</h2>
-                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--space-4);">
-                  <div>
-                    <div style="font-size: var(--font-size-sm); color: var(--color-text-secondary); margin-bottom: var(--space-1);">Email</div>
-                    <div>${customer.email}</div>
-                  </div>
-                  <div>
-                    <div style="font-size: var(--font-size-sm); color: var(--color-text-secondary); margin-bottom: var(--space-1);">Telefoon</div>
-                    <div>${customer.phone}</div>
-                  </div>
-                  <div>
-                    <div style="font-size: var(--font-size-sm); color: var(--color-text-secondary); margin-bottom: var(--space-1);">Adres</div>
-                    <div>${customer.address}, ${customer.postalCode} ${customer.city}</div>
-                  </div>
-                  <div>
-                    <div style="font-size: var(--font-size-sm); color: var(--color-text-secondary); margin-bottom: var(--space-1);">Klant sinds</div>
-                    <div>${new Date(customer.createdAt).toLocaleDateString('nl-NL')}</div>
-                  </div>
+              <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--space-4);">
+                <div>
+                  <div style="font-size: var(--font-size-sm); color: var(--color-text-secondary); margin-bottom: var(--space-1);">Email</div>
+                  <div>${customer.email || '-'}</div>
                 </div>
-              </dc-card>
-
-              <!-- Advisories section -->
-              <dc-card>
-                <div class="section-header">
-                  <div>
-                    <h3 class="section-title">Adviezen</h3>
-                    <p class="section-subtitle">
-                      ${advisories.length} ${advisories.length === 1 ? 'advies' : 'adviezen'}
-                    </p>
-                  </div>
-                  <div class="header-actions">
-                    <a href="#" id="expandAllButton" class="back-link" style="cursor: pointer;">
-                      ${allExpanded ? 'Alles inklappen' : 'Alles uitklappen'}
-                    </a>
-                    <dc-button variant="primary" size="sm" id="newAdvisoryButton" style="margin: 0; padding: var(--space-2) 0 var(--space-2) var(--space-4); min-width: 140px;">
-                      + Nieuw advies
-                    </dc-button>
-                  </div>
+                <div>
+                  <div style="font-size: var(--font-size-sm); color: var(--color-text-secondary); margin-bottom: var(--space-1);">Telefoon</div>
+                  <div>${customer.phone || '-'}</div>
                 </div>
+                <div>
+                  <div style="font-size: var(--font-size-sm); color: var(--color-text-secondary); margin-bottom: var(--space-1);">Adres</div>
+                  <div>${customer.street_address || '-'}, ${customer.postal_code || '-'} ${customer.city || '-'}</div>
+                </div>
+                <div>
+                  <div style="font-size: var(--font-size-sm); color: var(--color-text-secondary); margin-bottom: var(--space-1);">Aangemaakt</div>
+                  <div>${customer.created_at ? new Date(customer.created_at).toLocaleDateString('nl-NL') : '-'}</div>
+                </div>
+              </div>
+            </dc-card>
 
-                <dc-table
-                id="advisoriesTable"
-                current-page="${currentPage}"
-                page-size="${pageSize}"
-                total-items="${advisories.length}"
-                sort-column="${sortColumn}"
-                sort-direction="${sortDirection}">
-                <table slot="table">
-                  <thead>
-                    <tr class="table-header">
-                      <th data-sortable="name" style="width: 30%;">Naam</th>
-                      <th data-sortable="assignedTo" style="width: 20%;">Toegewezen aan</th>
-                      <th data-sortable="versionCount" style="width: 15%;">Berekeningen</th>
-                      <th data-sortable="updatedAt" style="width: 18%;">Laatst gewijzigd</th>
-                      <th data-sortable="createdAt" style="width: 17%;">Aangemaakt</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    ${page.map(advisory => {
-                      const isExpanded = expandedAdvisories.has(advisory.id);
-                      const versions = getVersionsByAdvisoryId(advisory.id);
-
-                      return `
-                        <tr class="table-row" data-row-id="${advisory.id}">
-                          <td class="table-cell" title="${advisory.name}">
-                            <div class="table-cell-flex">
-                              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" class="chevron-icon" style="transform: ${isExpanded ? 'rotate(90deg)' : 'rotate(0deg)'};">
-                                <path d="M6 4L10 8L6 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                              </svg>
-                              <span class="table-cell-content">${advisory.name}</span>
-                            </div>
-                          </td>
-                          <td class="table-cell" title="${advisory.assignedTo}">${advisory.assignedTo}</td>
-                          <td class="table-cell" title="${advisory.versionCount}">${advisory.versionCount}</td>
-                          <td class="table-cell" title="${new Date(advisory.updatedAt).toLocaleDateString('nl-NL')}">${new Date(advisory.updatedAt).toLocaleDateString('nl-NL')}</td>
-                          <td class="table-cell" title="${new Date(advisory.createdAt).toLocaleDateString('nl-NL')}">${new Date(advisory.createdAt).toLocaleDateString('nl-NL')}</td>
-                        </tr>
-                        ${isExpanded ? `
-                          <tr class="expanded-row">
-                            <td colspan="5" style="padding: var(--space-4) 0;">
-                              <div class="expanded-content">
-                                ${versions.length > 0 ? `
-                                  <div class="nested-table-wrapper">
-                                    <table class="nested-table">
-                                    <thead>
-                                      <tr class="table-header">
-                                        <th style="width: 25%;">Naam</th>
-                                        <th style="width: 23%;">Product</th>
-                                        <th style="width: 10%;">ROI</th>
-                                        <th style="width: 15%;">Terugverdientijd</th>
-                                        <th style="width: 13%;">Status</th>
-                                        <th style="width: 14%;">Laatst gewijzigd</th>
-                                      </tr>
-                                    </thead>
-                                    <tbody>
-                                      ${versions.map(version => `
-                                        <tr class="nested-row" data-version-id="${version.id}">
-                                          <td class="nested-table-cell" title="${version.name}">${version.name}</td>
-                                          <td class="nested-table-cell" title="${version.product} - ${version.capacity}">
-                                            <div class="product-info">${version.product}</div>
-                                            <div class="product-capacity">${version.capacity}</div>
-                                          </td>
-                                          <td class="nested-table-cell roi-cell" title="${version.roi}">${version.roi}</td>
-                                          <td class="nested-table-cell" title="${version.paybackYears} jaar">${version.paybackYears} jaar</td>
-                                          <td class="nested-table-cell" title="${version.status}">${getStatusBadge(version.status)}</td>
-                                          <td class="nested-table-cell" title="${new Date(version.updatedAt).toLocaleDateString('nl-NL')}">${new Date(version.updatedAt).toLocaleDateString('nl-NL')}</td>
-                                        </tr>
-                                      `).join('')}
-                                    </tbody>
-                                  </table>
-                                  </div>
-                                ` : `
-                                  <p style="color: var(--color-neutral-600); font-size: var(--font-size-sm); padding: var(--space-4) var(--space-2);">
-                                    Geen berekeningen gevonden
-                                  </p>
-                                `}
-                              </div>
-                            </td>
-                          </tr>
-                        ` : ''}
-                      `;
-                    }).join('')}
-                  </tbody>
-                </table>
-              </dc-table>
-              </dc-card>
+            <!-- Advisories section -->
+            <dc-card>
+              <h3 style="margin: 0 0 var(--space-4) 0;">Adviezen en Berekeningen</h3>
+              <div class="empty-state">
+                <p style="margin: 0 0 var(--space-2) 0; font-weight: var(--font-weight-medium);">
+                  Nog geen adviezen
+                </p>
+                <p style="margin: 0; font-size: var(--font-size-sm);">
+                  Adviezen en berekeningen worden beschikbaar na implementatie van de calculatie wizard (Phase 3).
+                </p>
+              </div>
+            </dc-card>
             </div>
           </main>
         `;
 
-        // Handle navigation
-        document.querySelector('dc-nav-header').addEventListener('navigate', (e) => {
-          router.navigate(e.detail.route);
-        });
+      // Handle navigation
+      document.querySelector('dc-nav-header').addEventListener('navigate', (e) => {
+        router.navigate(e.detail.route);
+      });
 
-        document.querySelector('dc-nav-header').addEventListener('logout', () => {
-          auth.logout();
-          showLogin();
-        });
+      document.querySelector('dc-nav-header').addEventListener('logout', () => {
+        auth.logout();
+        showLogin();
+      });
 
-        // Handle back button
-        document.getElementById('backButton').addEventListener('click', (e) => {
-          e.preventDefault();
-          router.navigate('/customers');
-        });
+      // Handle back button
+      document.getElementById('backButton').addEventListener('click', (e) => {
+        e.preventDefault();
+        router.navigate('/customers');
+      });
 
-        // Handle expand all button
-        document.getElementById('expandAllButton').addEventListener('click', (e) => {
-          e.preventDefault();
-          toggleAllAdvisories();
-        });
-
-        // Handle new advisory button
-        document.getElementById('newAdvisoryButton').addEventListener('click', () => {
-          alert('Nieuw advies maken - wordt nog geïmplementeerd');
-        });
-
-        // Handle table events
-        const table = document.getElementById('advisoriesTable');
-
-        table.addEventListener('row-click', (e) => {
-          // Only toggle if not clicking on an expanded row
-          if (!e.detail.row.classList.contains('expanded-row')) {
-            toggleAdvisory(e.detail.rowId);
-          }
-        });
-
-        table.addEventListener('sort-change', (e) => {
-          sortColumn = e.detail.column;
-          sortDirection = e.detail.direction;
-          render();
-        });
-
-        table.addEventListener('page-change', (e) => {
-          currentPage = e.detail.page;
-          render();
-        });
-
-        // Handle version row clicks (only add once)
-        if (!versionClickHandlerAdded) {
-          document.addEventListener('click', (e) => {
-            const versionRow = e.target.closest('.version-row');
-            if (versionRow) {
-              const versionId = versionRow.getAttribute('data-version-id');
-              alert(`Berekening ${versionId} openen - wordt nog geïmplementeerd`);
-            }
-          });
-          versionClickHandlerAdded = true;
-        }
-      }
-
-      render();
+      // Handle edit button
+      document.getElementById('editButton').addEventListener('click', () => {
+        router.navigate(`/customers/${customerId}/edit`);
+      });
     }
 
     // Render advisory detail page with versions

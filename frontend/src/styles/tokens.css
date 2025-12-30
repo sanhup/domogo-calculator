@@ -1,15 +1,26 @@
 :root {
+  /* Base font size - scales all rem values proportionally */
+  font-size: 95%;  /* Makes 1rem = ~15.2px instead of 16px */
+
   /* ============================================
      COLORS
      ============================================ */
 
-  /* Primary - Brand color (shadcn-style) */
-  --color-primary-50: #f0f9ff;
-  --color-primary-100: #e0f2fe;
-  --color-primary-500: #0ea5e9;  /* Main primary - more vibrant */
-  --color-primary-600: #0284c7;
-  --color-primary-700: #0369a1;
+  /* Primary - Brand color (bright blue from design) */
+  --color-primary-50: #eff6ff;
+  --color-primary-100: #dbeafe;
+  --color-primary-200: #bfdbfe;
+  --color-primary-500: #3b82f6;  /* Bright blue from Figma */
+  --color-primary-600: #2563eb;
+  --color-primary-700: #1d4ed8;
   --color-primary-foreground: #ffffff;
+
+  /* Cyan - For active tabs */
+  --color-cyan-50: #ecfeff;
+  --color-cyan-100: #cffafe;
+  --color-cyan-500: #06b6d4;  /* Active tab color */
+  --color-cyan-600: #0891b2;
+  --color-cyan-700: #0e7490;
 
   /* Neutral - Slate grays (shadcn uses slate) */
   --color-neutral-50: #f8fafc;
@@ -28,19 +39,52 @@
   --color-white: #ffffff;
   --color-black: #000000;
 
-  /* Semantic colors */
+  /* Semantic colors - Extended palettes */
+  /* Success - Green */
+  --color-success-50: #d1fae5;
+  --color-success-200: #6ee7b7;
+  --color-success-500: #10b981;
+  --color-success-700: #047857;
   --color-success: #10b981;
-  --color-warning: #f59e0b;
+
+  /* Danger/Error - Red */
+  --color-danger-50: #fef2f2;
+  --color-danger-200: #fecaca;
+  --color-danger-500: #ef4444;
+  --color-danger-700: #b91c1c;
   --color-error: #ef4444;
+
+  /* Warning - Amber/Orange */
+  --color-warning-50: #fef3c7;
+  --color-warning-500: #f59e0b;
+  --color-warning-700: #b45309;
+  --color-warning: #f59e0b;
+
+  /* Info */
   --color-info: #0ea5e9;
+
+  /* Icon colors (from Figma design) */
+  --color-icon-blue: #3b82f6;
+  --color-icon-magenta: #ec4899;
+  --color-icon-green: #10b981;
+  --color-icon-red: #ef4444;
+  --color-icon-orange: #f97316;
+  --color-icon-cyan: #06b6d4;
 
   /* Surface colors */
   --color-background: #ffffff;
+  --color-background-subtle: #f8f9fa;
   --color-surface: #ffffff;
   --color-surface-raised: #ffffff;
   --color-border: #e2e8f0;
-  --color-input: #ffffff;
-  --color-ring: #0ea5e9;
+  --color-border-subtle: #f1f3f5;
+  --color-input: #f8f9fa;  /* Light gray input background from design */
+  --color-input-border: #e9ecef;
+  --color-ring: #3b82f6;
+
+  /* Dark surfaces (for card headers, dark buttons) */
+  --color-dark-surface: #1e293b;  /* Dark navy from design */
+  --color-dark-surface-hover: #334155;
 
   /* Text colors */
   --color-text-primary: #0f172a;

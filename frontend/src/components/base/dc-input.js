@@ -80,6 +80,7 @@ class DcInput extends HTMLElement {
     const value = this.getAttribute('value') || '';
     const required = this.hasAttribute('required');
     const disabled = this.hasAttribute('disabled');
+    const hasError = this.hasAttribute('error');
     const error = this.getAttribute('error') || '';
 
     this.shadowRoot.innerHTML = `
@@ -112,13 +113,13 @@ class DcInput extends HTMLElement {
 
         input {
           width: 100%;
-          padding: var(--space-3) var(--space-4);
+          padding: var(--space-2) var(--space-3);
           font-size: var(--font-size-base);
           line-height: var(--line-height-normal);
           color: var(--color-text-primary);
-          background-color: var(--color-white);
-          border: var(--border-width-thin) solid var(--color-border);
-          border-radius: var(--border-radius-md);
+          background-color: var(--color-input);
+          border: var(--border-width-thin) solid var(--color-input-border);
+          border-radius: var(--border-radius-lg);
           transition: var(--transition-base);
         }
 
@@ -139,6 +140,16 @@ class DcInput extends HTMLElement {
         }
 
         input.error {
+          border-color: var(--color-danger-500);
+          background-color: var(--color-danger-50);
+        }
+
+        input.error:focus {
+          border-color: var(--color-danger-500);
+          box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+        }
+
+        input.error {
           border-color: var(--color-error);
         }
 
@@ -148,7 +159,12 @@ class DcInput extends HTMLElement {
 
         .error-message {
           font-size: var(--font-size-sm);
-          color: var(--color-error);
+          color: var(--color-danger-700);
+          background: var(--color-danger-50);
+          padding: var(--space-2) var(--space-3);
+          border: var(--border-width-thin) solid var(--color-danger-500);
+          border-radius: var(--border-radius-md);
+          margin-top: var(--space-2);
         }
       </style>
       <div class="input-group">
