@@ -188,17 +188,14 @@
     }
 
     // Render customer detail page
-    async function renderCustomerDetail(customerId) {
-      // Show loading state
+    function renderCustomerDetail(customerId) {
       document.getElementById('app').innerHTML = `
         <dc-nav-header
           user-name="${state.currentUser.name}"
           user-role="${state.currentUser.role}"
           active-route="/customers">
         </dc-nav-header>
-        <div style="padding: var(--space-6); text-align: center;">
-          <p>Laden...</p>
-        </div>
+        <customer-page customer-id="${customerId}"></customer-page>
       `;
 
       // Handle navigation
@@ -211,130 +208,11 @@
         showLogin();
       });
 
-      // Fetch customer from API
-      let customer;
-      try {
-        customer = await getCustomer(customerId);
-      } catch (error) {
-        console.error('Failed to load customer:', error);
-        alert('Fout bij het laden van klantgegevens');
-        router.navigate('/customers');
-        return;
-      }
-
-      // Render customer detail
-      document.getElementById('app').innerHTML = `
-        <dc-nav-header
-          user-name="${state.currentUser.name}"
-          user-role="${state.currentUser.role}"
-          active-route="/customers">
-        </dc-nav-header>
-
-        <style>
-          .page-container {
-            padding: var(--space-6);
-            background: #f8fafc;
-            min-height: calc(100vh - 64px);
-          }
-
-          .content-wrapper {
-            max-width: 1440px;
-            margin: 0 auto;
-          }
-
-          .back-link {
-            color: var(--color-neutral-600);
-            text-decoration: none;
-            font-size: var(--font-size-sm);
-            font-weight: var(--font-weight-medium);
-            transition: color 0.15s;
-          }
-
-          .back-link:hover {
-            color: var(--color-neutral-900);
-          }
-
-          .empty-state {
-            text-align: center;
-            padding: var(--space-8);
-            color: var(--color-text-secondary);
-            background: var(--color-neutral-50);
-            border-radius: var(--border-radius-md);
-          }
-        </style>
-
-        <main class="page-container">
-          <div class="content-wrapper">
-            <!-- Back button -->
-            <div style="margin-bottom: var(--space-4);">
-              <a href="#" id="backButton" class="back-link">
-                ← Terug naar klanten
-              </a>
-            </div>
-
-            <!-- Customer details card -->
-            <dc-card style="margin-bottom: var(--space-6);">
-              <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: var(--space-4);">
-                <h2 style="margin: 0;">${customer.full_name}</h2>
-                <dc-button variant="secondary" size="sm" id="editButton">
-                  Bewerken
-                </dc-button>
-              </div>
-              <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--space-4);">
-                <div>
-                  <div style="font-size: var(--font-size-sm); color: var(--color-text-secondary); margin-bottom: var(--space-1);">Email</div>
-                  <div>${customer.email || '-'}</div>
-                </div>
-                <div>
-                  <div style="font-size: var(--font-size-sm); color: var(--color-text-secondary); margin-bottom: var(--space-1);">Telefoon</div>
-                  <div>${customer.phone || '-'}</div>
-                </div>
-                <div>
-                  <div style="font-size: var(--font-size-sm); color: var(--color-text-secondary); margin-bottom: var(--space-1);">Adres</div>
-                  <div>${customer.street_address || '-'}, ${customer.postal_code || '-'} ${customer.city || '-'}</div>
-                </div>
-                <div>
-                  <div style="font-size: var(--font-size-sm); color: var(--color-text-secondary); margin-bottom: var(--space-1);">Aangemaakt</div>
-                  <div>${customer.created_at ? new Date(customer.created_at).toLocaleDateString('nl-NL') : '-'}</div>
-                </div>
-              </div>
-            </dc-card>
-
-            <!-- Advisories section -->
-            <dc-card>
-              <h3 style="margin: 0 0 var(--space-4) 0;">Adviezen en Berekeningen</h3>
-              <div class="empty-state">
-                <p style="margin: 0 0 var(--space-2) 0; font-weight: var(--font-weight-medium);">
-                  Nog geen adviezen
-                </p>
-                <p style="margin: 0; font-size: var(--font-size-sm);">
-                  Adviezen en berekeningen worden beschikbaar na implementatie van de calculatie wizard (Phase 3).
-                </p>
-              </div>
-            </dc-card>
-            </div>
-          </main>
-        `;
-
-      // Handle navigation
-      document.querySelector('dc-nav-header').addEventListener('navigate', (e) => {
-        router.navigate(e.detail.route);
-      });
-
-      document.querySelector('dc-nav-header').addEventListener('logout', () => {
-        auth.logout();
-        showLogin();
-      });
-
-      // Handle back button
-      document.getElementById('backButton').addEventListener('click', (e) => {
-        e.preventDefault();
-        router.navigate('/customers');
-      });
-
-      // Handle edit button
-      document.getElementById('editButton').addEventListener('click', () => {
-        router.navigate(`/customers/${customerId}/edit`);
+      // Handle customer page navigation
+      const customerPage = document.querySelector('customer-page');
+      customerPage.addEventListener('navigate', (e) => {
+        const { route } = e.detail;
+        router.navigate(route);
       });
     }
 

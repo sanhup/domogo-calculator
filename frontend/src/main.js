@@ -28,6 +28,7 @@ import './components/auth/dc-auth-form.js';
 // Import page components
 import './pages/customers/customer-list-page.js';
 import './pages/customers/customer-form-page.js';
+import './pages/customers/customer-page.js';
 
 // Initialize application
 console.log('Domogo Calculator frontend initialized');

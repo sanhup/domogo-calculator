@@ -222,11 +222,11 @@ class CustomerListPage extends HTMLElement {
   }
 
   /**
-   * Navigate to customer edit page
+   * Navigate to customer detail page
    */
   navigateToCustomer(customerId) {
     this.dispatchEvent(new CustomEvent('navigate', {
-      detail: { route: `/customers/${customerId}/edit` },
+      detail: { route: `/customers/${customerId}` },
       bubbles: true,
       composed: true
     }));
