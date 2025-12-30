@@ -135,8 +135,9 @@ class DcButton extends HTMLElement {
 
         /* Sizes */
         .sm {
-          padding: var(--space-2) var(--space-3);
+          padding: var(--space-3) var(--space-4);
           font-size: var(--font-size-sm);
+          line-height: 1;
         }
 
         .md {

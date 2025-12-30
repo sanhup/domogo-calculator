@@ -133,9 +133,21 @@ class CustomerListPage extends HTMLElement {
    * Handle search input
    */
   handleSearch(e) {
-    this.searchTerm = e.target.value;
+    const input = e.target;
+    const cursorPosition = input.selectionStart;
+
+    this.searchTerm = input.value;
     this.applyFilters();
     this.render();
+
+    // Restore focus and cursor position after render
+    requestAnimationFrame(() => {
+      const searchInput = this.querySelector('#searchInput');
+      if (searchInput) {
+        searchInput.focus();
+        searchInput.setSelectionRange(cursorPosition, cursorPosition);
+      }
+    });
   }
 
   /**
@@ -314,7 +326,7 @@ class CustomerListPage extends HTMLElement {
       <style>
         .page-container {
           padding: var(--space-8) var(--space-6);
-          background: var(--color-background);
+          background: var(--color-background-subtle);
           min-height: calc(100vh - 64px);
         }
 
@@ -356,7 +368,7 @@ class CustomerListPage extends HTMLElement {
 
         .search-box {
           position: relative;
-          min-width: 300px;
+          min-width: 400px;
         }
 
         .search-icon {
@@ -395,12 +407,13 @@ class CustomerListPage extends HTMLElement {
         }
 
         .filter-tab {
-          padding: var(--space-2) var(--space-4);
+          padding: var(--space-3) var(--space-4);
           border: none;
           background: var(--color-neutral-100);
           border-radius: var(--border-radius-full);
           font-size: var(--font-size-sm);
           font-weight: var(--font-weight-medium);
+          line-height: 1;
           cursor: pointer;
           transition: var(--transition-fast);
           color: var(--color-text-secondary);

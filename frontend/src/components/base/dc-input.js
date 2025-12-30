@@ -165,6 +165,16 @@ class DcInput extends HTMLElement {
           border: var(--border-width-thin) solid var(--color-danger-500);
           border-radius: var(--border-radius-md);
           margin-top: var(--space-2);
+          display: flex;
+          align-items: center;
+          gap: var(--space-2);
+        }
+
+        .error-message::before {
+          content: '•';
+          color: var(--color-danger-700);
+          font-weight: var(--font-weight-bold);
+          flex-shrink: 0;
         }
       </style>
       <div class="input-group">
