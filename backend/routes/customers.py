@@ -138,9 +138,11 @@ def create_customer(customer: CustomerCreate, db: Session = Depends(get_db)):
     """Create a new customer"""
     logger.info(
         "Creating new customer",
-        customer_name=customer.full_name,
-        customer_email=customer.email,
-        city=customer.city
+        extra={
+            "customer_name": customer.full_name,
+            "customer_email": customer.email,
+            "city": customer.city
+        }
     )
 
     new_customer = Customer(
@@ -159,8 +161,10 @@ def create_customer(customer: CustomerCreate, db: Session = Depends(get_db)):
 
     logger.info(
         "Customer created successfully",
-        customer_id=new_customer.id,
-        customer_name=new_customer.full_name
+        extra={
+            "customer_id": new_customer.id,
+            "customer_name": new_customer.full_name
+        }
     )
 
     return CustomerResponse(
@@ -219,28 +223,32 @@ def archive_customer(customer_id: int, db: Session = Depends(get_db)):
     customer = db.query(Customer).filter(Customer.id == customer_id).first()
 
     if not customer:
-        logger.warning("Archive attempt on non-existent customer", customer_id=customer_id)
+        logger.warning("Archive attempt on non-existent customer", extra={"customer_id": customer_id})
         raise HTTPException(status_code=404, detail="Customer not found")
 
     if customer.archived:
         logger.warning(
             "Archive attempt on already archived customer",
-            customer_id=customer_id,
-            customer_name=customer.full_name
+            extra={
+                "customer_id": customer_id,
+                "customer_name": customer.full_name
+            }
         )
         raise HTTPException(status_code=400, detail="Customer is already archived")
 
     logger.info(
         "Archiving customer",
-        customer_id=customer_id,
-        customer_name=customer.full_name
+        extra={
+            "customer_id": customer_id,
+            "customer_name": customer.full_name
+        }
     )
 
     customer.archived = True
     db.commit()
     db.refresh(customer)
 
-    logger.info("Customer archived successfully", customer_id=customer_id)
+    logger.info("Customer archived successfully", extra={"customer_id": customer_id})
 
     return CustomerResponse(
         id=customer.id,

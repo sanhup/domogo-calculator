@@ -18,7 +18,7 @@
  *   detail: { route: string }
  */
 
-import { getCustomer, updateCustomer } from '../../services/customer-api.js';
+import { getCustomer, createCustomer, updateCustomer } from '../../services/customer-api.js';
 import { FormChangeTracker } from '../../utils/form-change-tracker.js';
 
 class CustomerPage extends HTMLElement {
@@ -33,6 +33,7 @@ class CustomerPage extends HTMLElement {
     this.error = null;
     this.validationErrors = {};
     this.successMessage = null;
+    this.formData = null; // Temporary form data (preserved on validation errors)
   }
 
   static get observedAttributes() {
@@ -43,16 +44,39 @@ class CustomerPage extends HTMLElement {
     if (name === 'customer-id' && oldValue !== newValue) {
       this.customerId = newValue;
       if (this.isConnected) {
-        this.loadCustomer();
+        if (this.customerId && this.customerId !== 'new') {
+          this.loadCustomer();
+        } else {
+          // Create mode
+          this.mode = 'edit';
+          this.customer = {
+            full_name: '',
+            email: '',
+            phone: '',
+            street_address: '',
+            postal_code: '',
+            city: ''
+          };
+          this.render();
+        }
       }
     }
   }
 
   connectedCallback() {
-    if (this.customerId) {
+    if (this.customerId && this.customerId !== 'new') {
       this.loadCustomer();
     } else {
-      this.error = 'Geen klant-ID opgegeven';
+      // Create mode
+      this.mode = 'edit';
+      this.customer = {
+        full_name: '',
+        email: '',
+        phone: '',
+        street_address: '',
+        postal_code: '',
+        city: ''
+      };
       this.render();
     }
   }
@@ -85,6 +109,7 @@ class CustomerPage extends HTMLElement {
     this.mode = 'edit';
     this.validationErrors = {};
     this.successMessage = null;
+    this.formData = null; // Clear any previous form data
     // Set original data for change tracking
     this.changeTracker.setOriginalData(this.customer);
     this.render();
@@ -106,6 +131,7 @@ class CustomerPage extends HTMLElement {
     this.mode = 'view';
     this.validationErrors = {};
     this.successMessage = null;
+    this.formData = null; // Clear form data when canceling
     this.render();
   }
 
@@ -154,7 +180,7 @@ class CustomerPage extends HTMLElement {
 
     // Read values from dc-input elements
     const form = e.target;
-    const data = {
+    const rawData = {
       full_name: form.querySelector('[name="full_name"]')?.getValue() || '',
       email: form.querySelector('[name="email"]')?.getValue() || '',
       phone: form.querySelector('[name="phone"]')?.getValue() || '',
@@ -164,11 +190,21 @@ class CustomerPage extends HTMLElement {
     };
 
     // Validate
-    this.validationErrors = this.validateForm(data);
+    this.validationErrors = this.validateForm(rawData);
     if (Object.keys(this.validationErrors).length > 0) {
+      // Store form data to preserve user input when re-rendering
+      this.formData = rawData;
       this.render();
       return;
     }
+
+    // Filter out empty strings for API submission (send null for empty optional fields)
+    const data = Object.fromEntries(
+      Object.entries(rawData).map(([key, value]) => [
+        key,
+        value.trim() === '' ? null : value
+      ])
+    );
 
     // Submit
     this.loading = true;
@@ -176,26 +212,56 @@ class CustomerPage extends HTMLElement {
     this.render();
 
     try {
-      const savedCustomer = await updateCustomer(this.customerId, data);
-      this.customer = savedCustomer;
-      this.loading = false;
-      this.validationErrors = {};
-      this.mode = 'view';
-      this.successMessage = 'Wijzigingen opgeslagen';
+      let savedCustomer;
+      const isCreateMode = !this.customerId || this.customerId === 'new';
 
-      // Reset change tracker
-      this.changeTracker.setOriginalData(savedCustomer);
+      if (isCreateMode) {
+        savedCustomer = await createCustomer(data);
+        // Clear form data on success
+        this.formData = null;
+        this.validationErrors = {};
+        // Navigate to the new customer's detail page
+        this.dispatchEvent(new CustomEvent('navigate', {
+          detail: { route: `/customers/${savedCustomer.id}` },
+          bubbles: true,
+        }));
+      } else {
+        savedCustomer = await updateCustomer(this.customerId, data);
+        this.customer = savedCustomer;
+        this.formData = null;
+        this.loading = false;
+        this.validationErrors = {};
+        this.mode = 'view';
+        this.successMessage = 'Wijzigingen opgeslagen';
 
-      this.render();
+        // Reset change tracker
+        this.changeTracker.setOriginalData(savedCustomer);
 
-      // Clear success message after 3 seconds
-      setTimeout(() => {
-        this.successMessage = null;
         this.render();
-      }, 3000);
+
+        // Clear success message after 3 seconds
+        setTimeout(() => {
+          this.successMessage = null;
+          this.render();
+        }, 3000);
+      }
     } catch (err) {
       this.loading = false;
-      this.error = err.message || 'Fout bij het opslaan van klantgegevens';
+      console.error('Error saving customer:', err);
+
+      // Preserve form data on error so user doesn't lose their input
+      if (!this.formData) {
+        this.formData = rawData;
+      }
+
+      // Show detailed error message
+      if (err.data && typeof err.data === 'object') {
+        // Backend validation error
+        this.error = err.message || 'Validatiefout bij het opslaan van klantgegevens';
+      } else {
+        this.error = err.message || 'Fout bij het opslaan van klantgegevens';
+      }
+
       this.render();
     }
   }
@@ -319,12 +385,18 @@ class CustomerPage extends HTMLElement {
    * Render customer info edit mode
    */
   renderCustomerEdit() {
+    const isCreateMode = !this.customerId || this.customerId === 'new';
+    const title = isCreateMode ? 'Nieuwe klant' : 'Klant bewerken';
+
+    // Use formData if validation failed, otherwise use customer data
+    const displayData = this.formData || this.customer || {};
+
     return `
       <div class="customer-card">
         <div class="customer-header">
-          <h1 class="customer-title">Klant bewerken</h1>
+          <h1 class="customer-title">${title}</h1>
           <dc-button variant="dark" id="cancelButton">
-            Annuleren
+            ${isCreateMode ? 'Sluiten' : 'Annuleren'}
           </dc-button>
         </div>
 
@@ -341,7 +413,7 @@ class CustomerPage extends HTMLElement {
               <dc-input
                 id="full_name"
                 name="full_name"
-                value="${this.customer.full_name || ''}"
+                value="${displayData.full_name || ''}"
                 placeholder="bijv. Jan de Vries"
                 ${this.validationErrors.full_name ? `error="${this.validationErrors.full_name}"` : ''}
                 ${this.loading ? 'disabled' : ''}
@@ -362,7 +434,7 @@ class CustomerPage extends HTMLElement {
                   id="email"
                   name="email"
                   type="email"
-                  value="${this.customer.email || ''}"
+                  value="${displayData.email || ''}"
                   placeholder="naam@voorbeeld.nl"
                   ${this.validationErrors.email ? `error="${this.validationErrors.email}"` : ''}
                   ${this.loading ? 'disabled' : ''}
@@ -381,7 +453,7 @@ class CustomerPage extends HTMLElement {
                   id="phone"
                   name="phone"
                   type="tel"
-                  value="${this.customer.phone || ''}"
+                  value="${displayData.phone || ''}"
                   placeholder="06-12345678"
                   ${this.validationErrors.phone ? `error="${this.validationErrors.phone}"` : ''}
                   ${this.loading ? 'disabled' : ''}
@@ -401,7 +473,7 @@ class CustomerPage extends HTMLElement {
               <dc-input
                 id="street_address"
                 name="street_address"
-                value="${this.customer.street_address || ''}"
+                value="${displayData.street_address || ''}"
                 placeholder="Hoofdstraat 123"
                 ${this.validationErrors.street_address ? `error="${this.validationErrors.street_address}"` : ''}
                 ${this.loading ? 'disabled' : ''}
@@ -423,7 +495,7 @@ class CustomerPage extends HTMLElement {
                 <dc-input
                   id="postal_code"
                   name="postal_code"
-                  value="${this.customer.postal_code || ''}"
+                  value="${displayData.postal_code || ''}"
                   placeholder="1234AB"
                   ${this.validationErrors.postal_code ? `error="${this.validationErrors.postal_code}"` : ''}
                   ${this.loading ? 'disabled' : ''}
@@ -442,7 +514,7 @@ class CustomerPage extends HTMLElement {
                 <dc-input
                   id="city"
                   name="city"
-                  value="${this.customer.city || ''}"
+                  value="${displayData.city || ''}"
                   placeholder="Amsterdam"
                   ${this.validationErrors.city ? `error="${this.validationErrors.city}"` : ''}
                   ${this.loading ? 'disabled' : ''}
@@ -456,7 +528,7 @@ class CustomerPage extends HTMLElement {
                 type="submit"
                 variant="primary"
                 ${this.loading ? 'disabled' : ''}>
-                ${this.loading ? 'Opslaan...' : 'Opslaan'}
+                ${this.loading ? 'Opslaan...' : (isCreateMode ? 'Klant aanmaken' : 'Opslaan')}
               </dc-button>
             </div>
           </div>

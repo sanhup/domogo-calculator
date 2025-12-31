@@ -166,7 +166,7 @@
           user-role="${state.currentUser.role}"
           active-route="/customers">
         </dc-nav-header>
-        <customer-form-page ${customerId ? `customer-id="${customerId}"` : ''}></customer-form-page>
+        <customer-page customer-id="${customerId || 'new'}"></customer-page>
       `;
 
       // Handle navigation
@@ -179,9 +179,9 @@
         showLogin();
       });
 
-      // Handle customer form navigation
-      const customerForm = document.querySelector('customer-form-page');
-      customerForm.addEventListener('navigate', (e) => {
+      // Handle customer page navigation
+      const customerPage = document.querySelector('customer-page');
+      customerPage.addEventListener('navigate', (e) => {
         const { route } = e.detail;
         router.navigate(route);
       });
