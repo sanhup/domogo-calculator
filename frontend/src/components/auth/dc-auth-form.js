@@ -124,7 +124,7 @@ class DcAuthForm extends HTMLElement {
           box-shadow: var(--shadow-xl);
           padding: var(--space-8);
           width: 100%;
-          max-width: 440px;
+          max-width: var(--size-container-sm);
         }
 
         .logo {
@@ -169,7 +169,7 @@ class DcAuthForm extends HTMLElement {
 
         .error-banner {
           padding: var(--space-3) var(--space-4);
-          background-color: rgba(239, 68, 68, 0.1);
+          background-color: var(--color-danger-50);
           border: var(--border-width-thin) solid var(--color-error);
           border-radius: var(--border-radius-md);
           color: var(--color-error);
@@ -264,23 +264,39 @@ class DcAuthForm extends HTMLElement {
             <div class="form-group">
               ${!isLogin ? `
                 <dc-input
-                  name="name"
+                  name="full_name"
                   label="Naam"
                   type="text"
                   placeholder="Jan de Vries"
                   required
                   ${loading ? 'disabled' : ''}
                 ></dc-input>
-              ` : ''}
-
-              <dc-input
-                name="email"
-                label="Email"
-                type="email"
-                placeholder="jan@example.com"
-                required
-                ${loading ? 'disabled' : ''}
-              ></dc-input>
+                <dc-input
+                  name="username"
+                  label="Gebruikersnaam"
+                  type="text"
+                  placeholder="jdevries"
+                  required
+                  ${loading ? 'disabled' : ''}
+                ></dc-input>
+                <dc-input
+                  name="email"
+                  label="Email"
+                  type="email"
+                  placeholder="jan@example.com"
+                  required
+                  ${loading ? 'disabled' : ''}
+                ></dc-input>
+              ` : `
+                <dc-input
+                  name="username"
+                  label="Gebruikersnaam"
+                  type="text"
+                  placeholder="Voer je gebruikersnaam in"
+                  required
+                  ${loading ? 'disabled' : ''}
+                ></dc-input>
+              `}
 
               <dc-input
                 name="password"

@@ -254,8 +254,8 @@ class DcTable extends HTMLElement {
         }
 
         .page-button {
-          min-width: 36px;
-          height: 36px;
+          min-width: var(--size-button-sm);
+          height: var(--size-button-sm);
           padding: var(--space-2);
           border: var(--border-width-thin) solid var(--color-border);
           background: var(--color-white);
@@ -423,7 +423,7 @@ if (!document.getElementById('dc-table-global-styles')) {
 
     /* Generic expanded row styling */
     .expanded-row {
-      background: #f8fafc;
+      background: var(--color-neutral-50);
     }
 
     .expanded-content {

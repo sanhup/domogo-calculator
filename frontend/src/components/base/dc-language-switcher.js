@@ -49,14 +49,14 @@ class DcLanguageSwitcher extends HTMLElement {
         }
 
         .globe-icon {
-          width: 20px;
-          height: 20px;
+          width: var(--size-icon-md);
+          height: var(--size-icon-md);
           color: var(--color-text-secondary);
         }
 
         .chevron-icon {
-          width: 16px;
-          height: 16px;
+          width: var(--size-icon-sm);
+          height: var(--size-icon-sm);
           color: var(--color-text-secondary);
         }
       </style>

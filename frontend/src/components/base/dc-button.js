@@ -164,7 +164,7 @@ class DcButton extends HTMLElement {
           position: absolute;
           width: 1em;
           height: 1em;
-          border: 2px solid currentColor;
+          border: var(--border-width-medium) solid currentColor;
           border-top-color: transparent;
           border-radius: 50%;
           animation: spin 0.6s linear infinite;

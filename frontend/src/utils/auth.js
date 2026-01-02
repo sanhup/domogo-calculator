@@ -21,9 +21,12 @@
  * auth.logout();
  */
 
+const API_BASE_URL = 'http://localhost:8000';
+
 class AuthManager {
   constructor() {
     this.storageKey = 'domogo_auth';
+    this.refreshTokenKey = 'domogo_refresh_token';
     this.listeners = new Set();
     this.loadFromStorage();
   }
@@ -57,27 +60,62 @@ class AuthManager {
   }
 
   /**
+   * Get refresh token
+   */
+  getRefreshToken() {
+    return localStorage.getItem(this.refreshTokenKey);
+  }
+
+  /**
+   * Save refresh token
+   */
+  saveRefreshToken(token) {
+    localStorage.setItem(this.refreshTokenKey, token);
+  }
+
+  /**
+   * Clear refresh token
+   */
+  clearRefreshToken() {
+    localStorage.removeItem(this.refreshTokenKey);
+  }
+
+  /**
    * Login user
-   * @param {string} email - User email
+   * @param {string} username - Username (or email)
    * @param {string} password - User password
    * @returns {Promise<Object>} - User object
    */
-  async login(email, password) {
-    // TODO: Replace with actual API call
-    // For now, simulate API call
-    const response = await this.simulateLogin(email, password);
+  async login(username, password) {
+    const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ username, password }),
+    });
 
-    if (response.success) {
-      this.state = {
-        user: response.user,
-        token: response.token
-      };
-      this.saveToStorage();
-      this.notifyListeners('login', this.state.user);
-      return response.user;
-    } else {
-      throw new Error(response.error || 'Login failed');
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Login failed');
     }
+
+    const data = await response.json();
+
+    // Store access token
+    this.state.token = data.access_token;
+
+    // Store refresh token separately
+    this.saveRefreshToken(data.refresh_token);
+
+    // Fetch user info
+    const user = await this.fetchCurrentUser();
+    this.state.user = user;
+
+    this.saveToStorage();
+    this.notifyListeners('login', this.state.user);
+
+    return user;
   }
 
   /**
@@ -86,20 +124,25 @@ class AuthManager {
    * @returns {Promise<Object>} - User object
    */
   async register(userData) {
-    // TODO: Replace with actual API call
-    const response = await this.simulateRegister(userData);
+    const response = await fetch(`${API_BASE_URL}/api/auth/register`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(userData),
+    });
 
-    if (response.success) {
-      this.state = {
-        user: response.user,
-        token: response.token
-      };
-      this.saveToStorage();
-      this.notifyListeners('register', this.state.user);
-      return response.user;
-    } else {
-      throw new Error(response.error || 'Registration failed');
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Registration failed');
     }
+
+    const user = await response.json();
+
+    // After registration, login with the same credentials
+    await this.login(userData.username, userData.password);
+
+    return user;
   }
 
   /**
@@ -108,8 +151,62 @@ class AuthManager {
   logout() {
     const user = this.state.user;
     this.state = { user: null, token: null };
+    this.clearRefreshToken();
     this.saveToStorage();
     this.notifyListeners('logout', user);
+  }
+
+  /**
+   * Fetch current user info from API
+   */
+  async fetchCurrentUser() {
+    const response = await fetch(`${API_BASE_URL}/api/auth/me`, {
+      headers: {
+        'Authorization': `Bearer ${this.state.token}`
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch user info');
+    }
+
+    return response.json();
+  }
+
+  /**
+   * Refresh the access token using refresh token
+   */
+  async refreshAccessToken() {
+    const refreshToken = this.getRefreshToken();
+    if (!refreshToken) {
+      return false;
+    }
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/auth/refresh`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ refresh_token: refreshToken }),
+      });
+
+      if (!response.ok) {
+        this.logout();
+        return false;
+      }
+
+      const data = await response.json();
+      this.state.token = data.access_token;
+      this.saveRefreshToken(data.refresh_token);
+      this.saveToStorage();
+
+      return true;
+    } catch (error) {
+      console.error('Token refresh failed:', error);
+      this.logout();
+      return false;
+    }
   }
 
   /**
@@ -142,7 +239,7 @@ class AuthManager {
    * @returns {boolean}
    */
   hasRole(role) {
-    return this.state.user?.role === role;
+    return this.state.user?.roles?.includes(role) || false;
   }
 
   /**
@@ -151,7 +248,69 @@ class AuthManager {
    * @returns {boolean}
    */
   hasAnyRole(roles) {
-    return roles.includes(this.state.user?.role);
+    if (!this.state.user?.roles) return false;
+    return roles.some(role => this.state.user.roles.includes(role));
+  }
+
+  /**
+   * Make an authenticated API request
+   * Automatically includes JWT token and handles token refresh
+   *
+   * @param {string} endpoint - API endpoint (e.g., '/api/customers')
+   * @param {Object} options - Fetch options
+   * @returns {Promise<any>} Response data
+   */
+  async fetch(endpoint, options = {}) {
+    const token = this.getToken();
+
+    // Add authentication header
+    const headers = {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    };
+
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    let response = await fetch(`${API_BASE_URL}${endpoint}`, {
+      ...options,
+      headers,
+    });
+
+    // If unauthorized, try to refresh token
+    if (response.status === 401) {
+      const refreshed = await this.refreshAccessToken();
+
+      if (refreshed) {
+        // Retry request with new token
+        const newToken = this.getToken();
+        headers['Authorization'] = `Bearer ${newToken}`;
+
+        response = await fetch(`${API_BASE_URL}${endpoint}`, {
+          ...options,
+          headers,
+        });
+      } else {
+        // Refresh failed, redirect to login
+        this.logout();
+        window.location.hash = '#/login';
+        throw new Error('Session expired. Please login again.');
+      }
+    }
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      throw new Error(error.detail || `HTTP error! status: ${response.status}`);
+    }
+
+    // Handle empty responses
+    const contentType = response.headers.get('content-type');
+    if (contentType && contentType.includes('application/json')) {
+      return response.json();
+    }
+
+    return response.text();
   }
 
   /**
@@ -187,66 +346,6 @@ class AuthManager {
       };
     }
     return null;
-  }
-
-  // ===== Simulation methods (remove in production) =====
-
-  /**
-   * Simulate login API call (for demo purposes)
-   */
-  async simulateLogin(email, password) {
-    return new Promise(resolve => {
-      setTimeout(() => {
-        if (email === 'demo@domogo.nl' && password === 'demo123') {
-          resolve({
-            success: true,
-            user: {
-              id: '1',
-              name: 'Jan de Vries',
-              email: 'demo@domogo.nl',
-              role: 'advisor'
-            },
-            token: 'demo-token-' + Date.now()
-          });
-        } else if (email === 'admin@domogo.nl' && password === 'admin123') {
-          resolve({
-            success: true,
-            user: {
-              id: '2',
-              name: 'Admin User',
-              email: 'admin@domogo.nl',
-              role: 'admin'
-            },
-            token: 'demo-token-' + Date.now()
-          });
-        } else {
-          resolve({
-            success: false,
-            error: 'Ongeldige inloggegevens'
-          });
-        }
-      }, 1000);
-    });
-  }
-
-  /**
-   * Simulate register API call (for demo purposes)
-   */
-  async simulateRegister(userData) {
-    return new Promise(resolve => {
-      setTimeout(() => {
-        resolve({
-          success: true,
-          user: {
-            id: 'new-' + Date.now(),
-            name: userData.name,
-            email: userData.email,
-            role: 'customer'
-          },
-          token: 'demo-token-' + Date.now()
-        });
-      }, 1000);
-    });
   }
 }
 

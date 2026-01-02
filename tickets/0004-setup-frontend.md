@@ -132,17 +132,17 @@ See `0004-setup-frontend_details.md` for:
 - [ ] All three user types can login with appropriate access
 - [ ] Role-based navigation shows correct menu items
 
-**Customer Management (NEW - Priority):**
-- [ ] Advisors can view list of all customers
-- [ ] Advisors can search customers by name, email, phone, or address
-- [ ] Advisors can filter customers by status (Active/Archived/All)
-- [ ] Advisors can create new customers with all required fields
-- [ ] Advisors can edit existing customer information
-- [ ] Advisors can archive customers (with confirmation)
-- [ ] Advisors can unarchive customers
-- [ ] Archived customers are visually distinct in list view
-- [ ] Archived customers cannot be selected for new calculations
-- [ ] Customer data validates properly (email format, Dutch postal code)
+**Customer Management (NEW - Priority):** ✅ COMPLETED
+- [x] Advisors can view list of all customers
+- [x] Advisors can search customers by name, email, phone, or address
+- [x] Advisors can filter customers by status (Active/Archived/All)
+- [x] Advisors can create new customers with all required fields
+- [x] Advisors can edit existing customer information
+- [x] Advisors can archive customers (with confirmation)
+- [x] Advisors can unarchive customers
+- [x] Archived customers are visually distinct in list view (badge indicator)
+- [ ] Archived customers cannot be selected for new calculations (pending calculation wizard)
+- [x] Customer data validates properly (email format, Dutch postal code)
 
 **Calculations & Offers:**
 - [ ] Advisors can select a customer before starting calculation wizard
@@ -186,16 +186,17 @@ New endpoints needed:
 - [ ] Customer portal access
 - [ ] Role-based authorization middleware
 
-**Customer Management (NEW - Priority):**
-- [ ] GET `/api/customers` - List customers with search/filter support
-  - [ ] Query params: `search`, `archived`, `sort_by`, `limit`, `offset`
-  - [ ] Default: only return active customers (`archived=false`)
-- [ ] GET `/api/customers/:id` - Get single customer
-- [ ] POST `/api/customers` - Create new customer
-- [ ] PUT `/api/customers/:id` - Update customer
-- [ ] POST `/api/customers/:id/archive` - Mark customer as archived
-- [ ] POST `/api/customers/:id/unarchive` - Mark customer as active
-- [ ] Add `archived` boolean field to Customer model (default: false)
+**Customer Management (NEW - Priority):** ✅ COMPLETED
+- [x] GET `/api/customers` - List customers with search/filter support
+  - [x] Query params: `search`, `archived`, `sort_by`, `limit`, `offset`
+  - [x] Default: only return active customers (`archived=false`)
+- [x] GET `/api/customers/:id` - Get single customer
+- [x] POST `/api/customers` - Create new customer
+- [x] PUT `/api/customers/:id` - Update customer
+- [x] POST `/api/customers/:id/archive` - Mark customer as archived
+- [x] POST `/api/customers/:id/unarchive` - Mark customer as active
+- [x] Add `archived` boolean field to Customer model (default: false)
+- [x] Fix structured logging to use `extra={}` parameter
 
 **Calculations:**
 - [ ] Draft calculation save/load

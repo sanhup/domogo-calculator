@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import text
 from database import get_db, engine
 import models
-from routes import customers
+from routes import customers, auth, users, roles
 
 # Create FastAPI app
 app = FastAPI(
@@ -27,6 +27,9 @@ app.add_middleware(
 )
 
 # Include routers
+app.include_router(auth.router)
+app.include_router(users.router)
+app.include_router(roles.router)
 app.include_router(customers.router)
 
 

@@ -140,21 +140,13 @@ class DcInput extends HTMLElement {
         }
 
         input.error {
-          border-color: var(--color-danger-500);
+          border-color: var(--color-error);
           background-color: var(--color-danger-50);
         }
 
         input.error:focus {
-          border-color: var(--color-danger-500);
-          box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
-        }
-
-        input.error {
           border-color: var(--color-error);
-        }
-
-        input.error:focus {
-          box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+          box-shadow: var(--shadow-focus-error);
         }
 
         .error-message {

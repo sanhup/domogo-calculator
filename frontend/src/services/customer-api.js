@@ -3,7 +3,7 @@
  * Handles all customer-related API calls
  */
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+import { auth } from '../utils/auth.js';
 
 /**
  * Generic API error class
@@ -18,38 +18,19 @@ export class ApiError extends Error {
 }
 
 /**
- * Base fetch wrapper with error handling
+ * Base fetch wrapper with error handling and authentication
  */
 async function fetchApi(endpoint, options = {}) {
-  const { headers = {}, ...restOptions } = options;
-
-  headers['Content-Type'] = 'application/json';
-
   try {
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-      ...restOptions,
-      headers,
-    });
-
-    const contentType = response.headers.get('content-type');
-    const isJson = contentType?.includes('application/json');
-
-    if (!response.ok) {
-      const errorData = isJson ? await response.json() : await response.text();
-      throw new ApiError(
-        errorData.detail || errorData.message || 'API request failed',
-        response.status,
-        errorData
-      );
-    }
-
-    return isJson ? await response.json() : null;
+    // Use auth.fetch which includes JWT token and handles refresh
+    const data = await auth.fetch(endpoint, options);
+    return data;
   } catch (error) {
+    // auth.fetch already handles errors, but we wrap it in ApiError for consistency
     if (error instanceof ApiError) {
       throw error;
     }
-    // Network error or parse error
-    throw new ApiError('Network error or invalid response', 0, error);
+    throw new ApiError(error.message || 'API request failed', 0, error);
   }
 }
 

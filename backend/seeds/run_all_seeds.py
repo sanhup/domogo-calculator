@@ -7,13 +7,15 @@ import os
 # Add parent directory to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
+from seed_roles import seed_roles
+from seed_users import seed_users
 from seed_battery_modes import create_battery_modes
 from seed_master_data import import_master_data
 from seed_products import import_products
 from seed_customers import create_customers
 from database import SessionLocal
 import openpyxl
-from models import BatteryMode, Product, MasterDataYearly, Customer
+from models import BatteryMode, Product, MasterDataYearly, Customer, User, Role
 
 EXCEL_FILE = "/app/data/calculator.xlsx"
 
@@ -23,6 +25,16 @@ def print_database_report(db):
     print("\n" + "=" * 80)
     print("DATABASE REPORT")
     print("=" * 80)
+
+    # Roles
+    role_count = db.query(Role).count()
+    active_roles = db.query(Role).filter(Role.archived == False).count()
+    print(f"Roles: {role_count} (Active: {active_roles})")
+
+    # Users
+    user_count = db.query(User).count()
+    active_users = db.query(User).filter(User.archived == False).count()
+    print(f"Users: {user_count} (Active: {active_users})")
 
     # Battery modes
     battery_mode_count = db.query(BatteryMode).count()
@@ -67,28 +79,42 @@ def main():
     db = SessionLocal()
     try:
         print("\n" + "=" * 80)
-        print("1. BATTERY MODES")
+        print("1. ROLES")
+        print("=" * 80)
+        seed_roles()
+        role_count = db.query(Role).filter(Role.archived == False).count()
+
+        print("\n" + "=" * 80)
+        print("2. USERS")
+        print("=" * 80)
+        seed_users()
+        user_count = db.query(User).filter(User.archived == False).count()
+
+        print("\n" + "=" * 80)
+        print("3. BATTERY MODES")
         print("=" * 80)
         mode_count = create_battery_modes(db)
 
         print("\n" + "=" * 80)
-        print("2. MASTER DATA")
+        print("4. MASTER DATA")
         print("=" * 80)
         master_count = import_master_data(db, wb)
 
         print("\n" + "=" * 80)
-        print("3. PRODUCTS")
+        print("5. PRODUCTS")
         print("=" * 80)
         product_count = import_products(db, wb)
 
         print("\n" + "=" * 80)
-        print("4. CUSTOMERS")
+        print("6. CUSTOMERS")
         print("=" * 80)
         customer_count = create_customers(db)
 
         print("\n" + "=" * 80)
         print("SUMMARY")
         print("=" * 80)
+        print(f"✓ Roles: {role_count}")
+        print(f"✓ Users: {user_count}")
         print(f"✓ Battery modes: {mode_count}")
         print(f"✓ Master data years: {master_count}")
         print(f"✓ Products: {product_count}")

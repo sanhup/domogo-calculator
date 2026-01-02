@@ -77,7 +77,7 @@ class DcSidebarNav extends HTMLElement {
 
         :host {
           display: block;
-          width: 240px;
+          width: var(--size-sidebar-width);
           background-color: var(--color-white);
           border-right: var(--border-width-thin) solid var(--color-border);
           padding: var(--space-6) 0;
@@ -187,8 +187,8 @@ class DcSidebarNavItem extends HTMLElement {
         }
 
         .status-indicator {
-          width: 20px;
-          height: 20px;
+          width: var(--size-icon-md);
+          height: var(--size-icon-md);
           border-radius: var(--border-radius-full);
           border: 2px solid var(--color-neutral-300);
           display: flex;
@@ -209,8 +209,8 @@ class DcSidebarNavItem extends HTMLElement {
         }
 
         .checkmark {
-          width: 12px;
-          height: 12px;
+          width: var(--size-icon-xs);
+          height: var(--size-icon-xs);
           color: var(--color-white);
           display: none;
         }

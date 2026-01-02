@@ -103,13 +103,6 @@ class DcModal extends HTMLElement {
 
     this.shadowRoot.innerHTML = `
       <style>
-        :host {
-          --modal-sm: 400px;
-          --modal-md: 600px;
-          --modal-lg: 800px;
-          --modal-xl: 1000px;
-        }
-
         .modal-backdrop {
           display: ${isOpen ? 'flex' : 'none'};
           position: fixed;
@@ -117,7 +110,7 @@ class DcModal extends HTMLElement {
           left: 0;
           right: 0;
           bottom: 0;
-          background: rgba(0, 0, 0, 0.5);
+          background: var(--color-backdrop);
           z-index: var(--z-modal-backdrop);
           align-items: center;
           justify-content: center;
@@ -130,7 +123,7 @@ class DcModal extends HTMLElement {
           background: var(--color-white);
           border-radius: var(--border-radius-lg);
           box-shadow: var(--shadow-xl);
-          max-width: var(--modal-${size});
+          max-width: var(--size-modal-${size});
           width: 100%;
           max-height: 90vh;
           display: flex;

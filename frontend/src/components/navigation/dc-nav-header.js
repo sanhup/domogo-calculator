@@ -122,7 +122,7 @@ class DcNavHeader extends HTMLElement {
           display: flex;
           align-items: center;
           justify-content: space-between;
-          height: 64px;
+          height: var(--size-header-height);
         }
 
         .logo {
@@ -189,8 +189,8 @@ class DcNavHeader extends HTMLElement {
         }
 
         .user-avatar {
-          width: 32px;
-          height: 32px;
+          width: var(--size-avatar-md);
+          height: var(--size-avatar-md);
           border-radius: var(--border-radius-full);
           background-color: var(--color-primary-500);
           color: var(--color-white);

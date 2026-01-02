@@ -39,15 +39,26 @@
     };
 
     // Initialize app
-    function init() {
+    async function init() {
       console.log('Init called, pathname:', window.location.pathname);
       console.log('Is authenticated:', auth.isAuthenticated());
 
       // Check if user is authenticated
       if (auth.isAuthenticated()) {
-        console.log('User is authenticated, showing app');
-        state.currentUser = auth.getUser();
-        showApp();
+        console.log('User is authenticated, verifying token...');
+
+        try {
+          // Verify token is still valid by fetching current user
+          const user = await auth.fetchCurrentUser();
+          state.currentUser = user;
+          console.log('Token verified, showing app');
+          showApp();
+        } catch (error) {
+          console.error('Token verification failed:', error);
+          // Token is invalid or expired, show login
+          auth.logout();
+          showLogin();
+        }
       } else {
         console.log('User not authenticated, showing login');
         // Save the intended destination before showing login
@@ -75,8 +86,10 @@
         const { mode, data } = e.detail;
 
         try {
+          authForm.setAttribute('loading', '');
+
           if (mode === 'login') {
-            const user = await auth.login(data.email, data.password);
+            const user = await auth.login(data.username, data.password);
             state.currentUser = user;
 
             // Check if there's an intended path to redirect to
@@ -89,8 +102,13 @@
             } else {
               showApp();
             }
+          } else if (mode === 'register') {
+            const user = await auth.register(data);
+            state.currentUser = user;
+            showApp();
           }
         } catch (error) {
+          authForm.removeAttribute('loading');
           authForm.setAttribute('error', error.message);
         }
       });

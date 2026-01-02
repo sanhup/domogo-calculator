@@ -183,7 +183,7 @@ class DcSelect extends HTMLElement {
         }
 
         select.error:focus {
-          box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+          box-shadow: var(--shadow-focus-error);
         }
 
         .error-message {

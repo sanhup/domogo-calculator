@@ -560,71 +560,76 @@ frontend/
 - [ ] `dc-table` - Table component for customer list
 - [ ] Create validation utilities
 
-#### 3.2 Customer Management (Do this FIRST)
+#### 3.2 Customer Management (Do this FIRST) ✅ MOSTLY COMPLETED
+
 Build customer management interface before calculation wizard:
 
-**3.2.1 Customer List Page**
-- [ ] Create `customer-list-page.js`
-- [ ] Display all customers in table format
-  - [ ] Columns: Name, Email, Phone, City, Created Date, Status
-  - [ ] Show only active customers by default
-  - [ ] Option to show archived customers
-  - [ ] Visual indicator for archived status (grayed out)
-- [ ] "New Customer" button
-- [ ] Action buttons per row: View, Edit, Archive/Unarchive
+**3.2.1 Customer List Page** ✅
+- [x] Create `customer-list-page.js`
+- [x] Display all customers in table format
+  - [x] Columns: Name, Email, Phone, City, Created Date
+  - [x] Show only active customers by default
+  - [x] Option to show archived customers
+  - [x] Visual indicator for archived status (grayed out badge)
+- [x] "New Customer" button
+- [x] Action buttons per row: Bewerken (Edit), Archiveren/Herstellen
+- [x] Row click navigates to customer detail page
 
-**3.2.2 Customer Search & Filtering**
-- [ ] Add search input (searches name, email, phone, address)
-- [ ] Real-time search (debounced)
-- [ ] Filter by status: Active / Archived / All
-- [ ] Sort by: Name, Created Date, Email
-- [ ] Pagination if customer list is large (optional for now)
+**3.2.2 Customer Search & Filtering** ✅
+- [x] Add search input (searches name, email, phone, address)
+- [x] Real-time search (with debounce for cursor position preservation)
+- [x] Filter by status: Active / Archived / All (tab navigation)
+- [x] Sort by: Name, Created Date, Email (via dc-table)
+- [x] Pagination via dc-table component
 
-**3.2.3 Customer Form (Create/Edit)**
-- [ ] Create `customer-form-page.js` or modal component
-- [ ] Form fields:
-  - [ ] First name (required)
-  - [ ] Last name (required)
-  - [ ] Email (required, validated)
-  - [ ] Phone (required)
-  - [ ] Street address (required)
-  - [ ] House number (required)
-  - [ ] Postal code (required, Dutch format validation)
-  - [ ] City (required)
-  - [ ] Notes (optional, textarea)
-- [ ] Validation on all required fields
-- [ ] Email format validation
-- [ ] Dutch postal code format (1234AB)
-- [ ] Save button
-- [ ] Cancel button
+**3.2.3 Customer Form (Create/Edit)** ✅
+- [x] Create `customer-page.js` component (unified view/edit/create)
+- [x] View mode: Read-only customer information display
+- [x] Edit mode: Inline form with validation
+- [x] Create mode: Same component, no customer-id
+- [x] Form fields:
+  - [x] Full name (required)
+  - [x] Email (required, validated)
+  - [x] Phone (required)
+  - [x] Street address (required)
+  - [x] Postal code (required, Dutch format validation: 1234AB)
+  - [x] City (required)
+- [x] Validation on all required fields
+- [x] Email format validation
+- [x] Dutch postal code format (1234AB)
+- [x] Save button (with FormChangeTracker)
+- [x] Cancel/Annuleren button
+- [x] Form data preservation on validation errors
+- [x] Tab navigation for related data (Adviezen, Facturen, Documenten, Notities)
 
-**3.2.4 Customer Archive/Unarchive**
-- [ ] Archive button on customer detail/list
-  - [ ] Confirmation modal: "Are you sure you want to archive [Customer Name]?"
-  - [ ] Sets `archived` flag to true
-  - [ ] Does NOT delete from database
-- [ ] Unarchive button (only visible for archived customers)
-  - [ ] Sets `archived` flag to false
-- [ ] Archived customers:
-  - [ ] Still visible in "Show Archived" view
-  - [ ] Cannot be selected for new calculations
-  - [ ] Existing calculations remain intact
+**3.2.4 Customer Archive/Unarchive** ✅ (Backend ready, UI exists)
+- [x] Archive button on customer list
+  - [x] Confirmation modal: "Are you sure you want to archive [Customer Name]?"
+  - [x] Sets `archived` flag to true
+  - [x] Does NOT delete from database
+- [x] Unarchive button (only visible for archived customers)
+  - [x] Sets `archived` flag to false
+- [x] Archived customers:
+  - [x] Still visible in "Show Archived" view
+  - [x] Filtered out by default from active lists
+  - [ ] Cannot be selected for new calculations (not implemented yet, no calculation wizard)
 
-**3.2.5 Customer API Integration**
-- [ ] Create `customer-api.js` service
-  - [ ] `getCustomers(filters)` - List with search/filter
-  - [ ] `getCustomer(id)` - Get single customer
-  - [ ] `createCustomer(data)` - Create new
-  - [ ] `updateCustomer(id, data)` - Update existing
-  - [ ] `archiveCustomer(id)` - Mark as archived
-  - [ ] `unarchiveCustomer(id)` - Mark as active
+**3.2.5 Customer API Integration** ✅
+- [x] Create `customer-api.js` service
+  - [x] `getCustomers(filters)` - List with search/filter
+  - [x] `getCustomer(id)` - Get single customer
+  - [x] `createCustomer(data)` - Create new
+  - [x] `updateCustomer(id, data)` - Update existing
+  - [x] `archiveCustomer(id)` - Mark as archived
+  - [x] `unarchiveCustomer(id)` - Mark as active
 
-**Backend Requirements for Customer Management:**
-- [ ] Customer CRUD endpoints
-- [ ] Search/filter support (query params)
-- [ ] Add `archived` boolean field to Customer model
-- [ ] Default `archived = false` on creation
-- [ ] Ensure archived customers excluded from active lists by default
+**Backend Requirements for Customer Management:** ✅
+- [x] Customer CRUD endpoints (all implemented)
+- [x] Search/filter support (query params: search, archived, sort_by, limit, offset)
+- [x] Add `archived` boolean field to Customer model
+- [x] Default `archived = false` on creation
+- [x] Ensure archived customers excluded from active lists by default
+- [x] Fixed structured logging to use `extra={}` parameter
 
 #### 3.3 Calculation Wizard Pages
 Create each page with proper validation (AFTER customer management):

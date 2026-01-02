@@ -86,6 +86,10 @@
   --color-dark-surface: #1e293b;  /* Dark navy from design */
   --color-dark-surface-hover: #334155;
 
+  /* Overlay/backdrop colors */
+  --color-backdrop: rgba(0, 0, 0, 0.5);  /* Modal backdrop */
+  --color-backdrop-light: rgba(0, 0, 0, 0.3);  /* Lighter backdrop */
+
   /* Text colors */
   --color-text-primary: #0f172a;
   --color-text-secondary: #64748b;
@@ -161,6 +165,7 @@
   --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
   --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
   --shadow-focus: 0 0 0 2px rgba(14, 165, 233, 0.2);  /* Updated to match new primary */
+  --shadow-focus-error: 0 0 0 3px rgba(239, 68, 68, 0.1);  /* Error state focus shadow */
 
   /* ============================================
      TRANSITIONS
@@ -181,4 +186,41 @@
   --z-modal: 1050;
   --z-popover: 1060;
   --z-tooltip: 1070;
+
+  /* ============================================
+     COMPONENT DIMENSIONS
+     ============================================ */
+
+  /* Common icon sizes */
+  --size-icon-xs: 12px;
+  --size-icon-sm: 16px;
+  --size-icon-md: 20px;
+  --size-icon-lg: 24px;
+  --size-icon-xl: 32px;
+
+  /* Avatar sizes */
+  --size-avatar-sm: 24px;
+  --size-avatar-md: 32px;
+  --size-avatar-lg: 40px;
+
+  /* Header/navigation */
+  --size-header-height: 64px;
+  --size-sidebar-width: 240px;
+
+  /* Modal widths */
+  --size-modal-sm: 400px;
+  --size-modal-md: 600px;
+  --size-modal-lg: 800px;
+  --size-modal-xl: 1000px;
+
+  /* Container/form widths */
+  --size-container-sm: 440px;
+  --size-container-md: 640px;
+  --size-container-lg: 1024px;
+  --size-container-xl: 1280px;
+
+  /* Button/interactive element sizes */
+  --size-button-sm: 36px;
+  --size-button-md: 40px;
+  --size-button-lg: 44px;
 }

@@ -128,6 +128,15 @@ class CustomerPage extends HTMLElement {
       if (!confirmed) return;
     }
 
+    const isCreateMode = !this.customerId || this.customerId === 'new';
+
+    // If creating new customer, navigate back to list
+    if (isCreateMode) {
+      this.handleBack();
+      return;
+    }
+
+    // If editing existing customer, switch back to view mode
     this.mode = 'view';
     this.validationErrors = {};
     this.successMessage = null;
@@ -293,7 +302,7 @@ class CustomerPage extends HTMLElement {
         <div class="customer-header">
           <h1 class="customer-title">Klant</h1>
           <dc-button variant="dark" id="editButton">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: var(--space-2);">
+            <svg class="button-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
               <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
             </svg>
@@ -572,7 +581,7 @@ class CustomerPage extends HTMLElement {
         </div>
 
         <div class="empty-state">
-          <p style="margin: 0; color: var(--color-text-secondary);">
+          <p class="placeholder-text">
             Adviezen/berekeningen komen binnenkort beschikbaar
           </p>
         </div>
@@ -587,7 +596,7 @@ class CustomerPage extends HTMLElement {
     return `
       <div class="tab-content">
         <div class="empty-state">
-          <p style="margin: 0; color: var(--color-text-secondary);">
+          <p class="placeholder-text">
             ${tabName} worden binnenkort beschikbaar
           </p>
         </div>
@@ -792,6 +801,15 @@ class CustomerPage extends HTMLElement {
         .tab-subtitle {
           margin: 0;
           font-size: var(--font-size-sm);
+          color: var(--color-text-secondary);
+        }
+
+        .button-icon {
+          margin-right: var(--space-2);
+        }
+
+        .placeholder-text {
+          margin: 0;
           color: var(--color-text-secondary);
         }
 

@@ -436,25 +436,6 @@ class CustomerListPage extends HTMLElement {
           align-items: center;
         }
 
-        .action-btn {
-          display: inline-flex;
-          align-items: center;
-          gap: var(--space-1);
-          padding: 0;
-          border: none;
-          background: none;
-          font-size: var(--font-size-sm);
-          cursor: pointer;
-          transition: var(--transition-fast);
-          color: var(--color-text-secondary);
-          font-family: var(--font-sans);
-          font-weight: var(--font-weight-medium);
-        }
-
-        .action-btn:hover {
-          color: var(--color-text-primary);
-        }
-
         .action-icon {
           width: 16px;
           height: 16px;
@@ -500,6 +481,11 @@ class CustomerListPage extends HTMLElement {
           text-align: center;
           padding: var(--space-8);
           color: var(--color-text-secondary);
+        }
+
+        .empty-subtitle {
+          color: var(--color-text-secondary);
+          font-size: var(--font-size-sm);
         }
       </style>
 
@@ -600,21 +586,21 @@ class CustomerListPage extends HTMLElement {
                       <td class="table-cell">${customer.created_at ? new Date(customer.created_at).toLocaleDateString('nl-NL') : '-'}</td>
                       <td class="table-cell">
                         <div class="actions-cell">
-                          <button class="action-btn view-btn" data-customer-id="${customer.id}">
+                          <dc-button variant="ghost" size="sm" class="view-btn" data-customer-id="${customer.id}">
                             <svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                               <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
                               <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
                             </svg>
                             Bewerken
-                          </button>
-                          <button class="action-btn archive-btn" data-customer-id="${customer.id}">
+                          </dc-button>
+                          <dc-button variant="ghost" size="sm" class="archive-btn" data-customer-id="${customer.id}">
                             <svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                               <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
                               <line x1="9" y1="9" x2="15" y2="15"></line>
                               <line x1="15" y1="9" x2="9" y2="15"></line>
                             </svg>
                             ${customer.archived ? 'Herstellen' : 'Archiveren'}
-                          </button>
+                          </dc-button>
                         </div>
                       </td>
                     </tr>
@@ -635,7 +621,7 @@ class CustomerListPage extends HTMLElement {
               : `Weet u zeker dat u <strong>${this.customerToArchive.full_name}</strong> wilt archiveren?`
             }
           </p>
-          <p style="color: var(--color-text-secondary); font-size: var(--font-size-sm);">
+          <p class="empty-subtitle">
             ${this.customerToArchive.archived
               ? 'De klant wordt weer actief en kan gebruikt worden voor nieuwe berekeningen.'
               : 'De klant wordt gearchiveerd maar niet verwijderd. Bestaande berekeningen blijven behouden.'
